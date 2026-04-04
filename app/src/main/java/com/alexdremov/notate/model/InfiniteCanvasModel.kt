@@ -192,10 +192,16 @@ class InfiniteCanvasModel {
             val lockedLayerIds = layerManager.getLockedLayerIds()
             val hiddenLayerIds = layerManager.getHiddenLayerIds()
 
+            // Pre-filter candidates to exclude items on locked or hidden layers
+            candidates.removeAll { item ->
+                lockedLayerIds.contains(item.layerId) || hiddenLayerIds.contains(item.layerId)
+            }
+
+            if (candidates.isEmpty()) return@withLock null
+
             when (type) {
                 EraserType.STROKE -> {
                     candidates.forEach { item ->
-                        if (lockedLayerIds.contains(item.layerId) || hiddenLayerIds.contains(item.layerId)) return@forEach
                         if (item is Stroke && RectF.intersects(item.bounds, eraserStroke.bounds) &&
                             StrokeGeometry.strokeIntersects(item, eraserStroke)
                         ) {
@@ -218,7 +224,6 @@ class InfiniteCanvasModel {
 
                 EraserType.LASSO -> {
                     candidates.forEach { item ->
-                        if (lockedLayerIds.contains(item.layerId) || hiddenLayerIds.contains(item.layerId)) return@forEach
                         if (!eraserStroke.bounds.contains(item.bounds)) return@forEach
                         val isContained =
                             if (item is Stroke) {
@@ -241,7 +246,6 @@ class InfiniteCanvasModel {
 
                 EraserType.STANDARD -> {
                     candidates.filterIsInstance<Stroke>().forEach { target ->
-                        if (lockedLayerIds.contains(target.layerId) || hiddenLayerIds.contains(target.layerId)) return@forEach
                         if (RectF.intersects(target.bounds, eraserStroke.bounds)) {
                             val newParts = StrokeGeometry.splitStroke(target, eraserStroke)
                             if (newParts.size != 1 || newParts[0] !== target) {
