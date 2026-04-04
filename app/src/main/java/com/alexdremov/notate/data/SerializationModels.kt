@@ -4,6 +4,7 @@ package com.alexdremov.notate.data
 
 import com.alexdremov.notate.config.CanvasConfig
 import com.alexdremov.notate.model.BackgroundStyle
+import com.alexdremov.notate.model.Layer
 import com.alexdremov.notate.model.StrokeType
 import com.alexdremov.notate.model.Tag
 import kotlinx.serialization.Serializable
@@ -12,6 +13,35 @@ import kotlinx.serialization.protobuf.ProtoNumber
 enum class CanvasType {
     INFINITE,
     FIXED_PAGES,
+}
+
+@Serializable
+data class LayerData(
+    @ProtoNumber(1) val id: String,
+    @ProtoNumber(2) val name: String,
+    @ProtoNumber(3) val isVisible: Boolean = true,
+    @ProtoNumber(4) val isLocked: Boolean = false,
+    @ProtoNumber(5) val opacity: Float = 1.0f,
+) {
+    fun toLayer(): Layer =
+        Layer(
+            id = id,
+            name = name,
+            isVisible = isVisible,
+            isLocked = isLocked,
+            opacity = opacity,
+        )
+
+    companion object {
+        fun fromLayer(layer: Layer): LayerData =
+            LayerData(
+                id = layer.id,
+                name = layer.name,
+                isVisible = layer.isVisible,
+                isLocked = layer.isLocked,
+                opacity = layer.opacity,
+            )
+    }
 }
 
 @Serializable
@@ -46,6 +76,8 @@ data class CanvasData(
     val nextStrokeOrder: Long = 0,
     @ProtoNumber(17)
     val uuid: String? = null,
+    @ProtoNumber(18)
+    val layers: List<LayerData> = emptyList(),
 )
 
 @Serializable
@@ -69,6 +101,7 @@ data class LinkItemData(
     @ProtoNumber(10) val rotation: Float = 0f,
     @ProtoNumber(11) val type: LinkType = LinkType.INTERNAL_NOTE,
     @ProtoNumber(12) val fontSize: Float = 24f,
+    @ProtoNumber(13) val layerId: String = Layer.DEFAULT_LAYER_ID,
 )
 
 @Serializable
@@ -111,6 +144,8 @@ data class CanvasImageData(
     val rotation: Float = 0f,
     @ProtoNumber(9)
     val opacity: Float = 1.0f,
+    @ProtoNumber(10)
+    val layerId: String = Layer.DEFAULT_LAYER_ID,
 )
 
 @Serializable
@@ -128,6 +163,7 @@ data class TextItemData(
     @ProtoNumber(11) val opacity: Float = 1.0f,
     @ProtoNumber(12) val alignment: Int = 0, // 0: Normal, 1: Opposite, 2: Center
     @ProtoNumber(13) val backgroundColor: Int = 0,
+    @ProtoNumber(14) val layerId: String = Layer.DEFAULT_LAYER_ID,
 )
 
 @Serializable
@@ -146,6 +182,8 @@ data class StrokeData(
     val strokeOrder: Long = 0,
     @ProtoNumber(8)
     val zIndex: Float = 0f,
+    @ProtoNumber(9)
+    val layerId: String = Layer.DEFAULT_LAYER_ID,
 ) {
     companion object {
         const val PACKED_POINT_STRIDE = 6
@@ -173,6 +211,7 @@ data class StrokeData(
         if (width != other.width) return false
         if (style != other.style) return false
         if (strokeOrder != other.strokeOrder) return false
+        if (layerId != other.layerId) return false
         return zIndex == other.zIndex
     }
 
@@ -184,6 +223,7 @@ data class StrokeData(
         result = 31 * result + style.hashCode()
         result = 31 * result + strokeOrder.hashCode()
         result = 31 * result + zIndex.hashCode()
+        result = 31 * result + layerId.hashCode()
         return result
     }
 }

@@ -29,6 +29,7 @@ data class CanvasImage(
     override val order: Long = 0,
     val rotation: Float = 0f,
     val opacity: Float = 1.0f,
+    override val layerId: String = Layer.DEFAULT_LAYER_ID,
 ) : CanvasItem {
     override fun distanceToPoint(
         x: Float,

@@ -18,6 +18,7 @@ data class LinkItem(
     override val zIndex: Float = 0f,
     override val order: Long = 0,
     val rotation: Float = 0f,
+    override val layerId: String = Layer.DEFAULT_LAYER_ID,
 ) : CanvasItem {
     override fun distanceToPoint(
         x: Float,

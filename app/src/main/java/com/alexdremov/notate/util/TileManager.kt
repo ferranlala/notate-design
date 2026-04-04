@@ -857,10 +857,12 @@ class TileManager(
         // queryItems returns ArrayList, let's assume mutable or copy.
         val sortedItems = items.sortedWith(compareBy<com.alexdremov.notate.model.CanvasItem> { it.zIndex }.thenBy { it.order })
         val hidden = hiddenItemIds
+        val hiddenLayerIds = canvasModel.layerManager.getHiddenLayerIds()
 
         for (item in sortedItems) {
             yield() // Check cancellation
             if (hidden.contains(item.order)) continue
+            if (hiddenLayerIds.contains(item.layerId)) continue
             renderer.drawItemToCanvas(canvas, item, scale = scale)
         }
         canvas.restore()
@@ -868,6 +870,7 @@ class TileManager(
 
     fun updateTilesWithItem(item: com.alexdremov.notate.model.CanvasItem) {
         if (hiddenItemIds.contains(item.order)) return
+        if (canvasModel.layerManager.getHiddenLayerIds().contains(item.layerId)) return
 
         if (item is Stroke && item.style == com.alexdremov.notate.model.StrokeType.HIGHLIGHTER) {
             refreshTiles(item.bounds)
@@ -966,6 +969,7 @@ class TileManager(
 
         val handledKeys = HashSet<TileCache.TileKey>()
         val hidden = hiddenItemIds
+        val hiddenLayerIds = canvasModel.layerManager.getHiddenLayerIds()
 
         // Update Cached Tiles
         for ((key, cachedTile) in snapshot) {
@@ -991,6 +995,7 @@ class TileManager(
                 // Batch Draw Intersecting Items
                 for (item in standardItems) {
                     if (hidden.contains(item.order)) continue
+                    if (hiddenLayerIds.contains(item.layerId)) continue
                     if (RectF.intersects(item.bounds, tileRect)) {
                         renderer.drawItemToCanvas(tileCanvas, item, scale = scale)
                     }

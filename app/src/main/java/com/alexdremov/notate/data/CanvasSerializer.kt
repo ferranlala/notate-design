@@ -53,6 +53,7 @@ object CanvasSerializer {
             style = item.style,
             strokeOrder = item.strokeOrder,
             zIndex = item.zIndex,
+            layerId = item.layerId,
         )
     }
 
@@ -67,6 +68,7 @@ object CanvasSerializer {
             order = item.order,
             rotation = item.rotation,
             opacity = item.opacity,
+            layerId = item.layerId,
         )
 
     fun fromCanvasImageData(cData: CanvasImageData): com.alexdremov.notate.model.CanvasImage {
@@ -80,6 +82,7 @@ object CanvasSerializer {
             order = cData.order,
             rotation = cData.rotation,
             opacity = cData.opacity,
+            layerId = cData.layerId,
         )
     }
 
@@ -103,6 +106,7 @@ object CanvasSerializer {
                     else -> 0
                 },
             backgroundColor = item.backgroundColor,
+            layerId = item.layerId,
         )
 
     fun fromTextItemData(tData: TextItemData): com.alexdremov.notate.model.TextItem {
@@ -125,6 +129,7 @@ object CanvasSerializer {
             order = tData.order,
             rotation = tData.rotation,
             opacity = tData.opacity,
+            layerId = tData.layerId,
         )
     }
 
@@ -142,6 +147,7 @@ object CanvasSerializer {
             zIndex = item.zIndex,
             order = item.order,
             rotation = item.rotation,
+            layerId = item.layerId,
         )
 
     fun fromLinkItemData(lData: LinkItemData): LinkItem {
@@ -158,6 +164,7 @@ object CanvasSerializer {
             zIndex = lData.zIndex,
             order = lData.order,
             rotation = lData.rotation,
+            layerId = lData.layerId,
         )
     }
 
@@ -258,6 +265,7 @@ object CanvasSerializer {
             bounds = bounds,
             strokeOrder = sData.strokeOrder,
             zIndex = sData.zIndex,
+            layerId = sData.layerId,
         )
     }
 
@@ -276,6 +284,7 @@ object CanvasSerializer {
         val tagIds: List<String> = emptyList(),
         val tagDefinitions: List<Tag> = emptyList(),
         val uuid: String? = null,
+        val layers: List<com.alexdremov.notate.model.Layer> = emptyList(),
     )
 
     fun serializeCanvasData(canvasData: CanvasData): ByteArray = ProtoBuf.encodeToByteArray(CanvasData.serializer(), canvasData)
@@ -325,6 +334,7 @@ object CanvasSerializer {
         regionSize: Float,
         nextStrokeOrder: Long,
         uuid: String? = null,
+        layers: List<com.alexdremov.notate.model.Layer> = emptyList(),
     ): CanvasData =
         CanvasData(
             canvasType = canvasType,
@@ -340,5 +350,6 @@ object CanvasSerializer {
             regionSize = regionSize,
             nextStrokeOrder = nextStrokeOrder,
             uuid = uuid,
+            layers = layers.map { LayerData.fromLayer(it) },
         )
 }

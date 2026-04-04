@@ -43,6 +43,9 @@ class InfiniteCanvasModel {
     // History Manager
     private val historyManager = HistoryManager()
 
+    // Layer Manager
+    val layerManager = LayerManager()
+
     sealed class ModelEvent {
         data class ItemsAdded(
             val items: List<CanvasItem>,
@@ -144,12 +147,13 @@ class InfiniteCanvasModel {
 
         var addedItem: CanvasItem? = null
         mutex.withLock {
+            val activeLayerId = layerManager.getActiveLayerId()
             val orderedItem =
                 when (item) {
-                    is Stroke -> item.copy(strokeOrder = nextOrder++)
-                    is CanvasImage -> item.copy(order = nextOrder++)
-                    is TextItem -> item.copy(order = nextOrder++)
-                    is LinkItem -> item.copy(order = nextOrder++)
+                    is Stroke -> item.copy(strokeOrder = nextOrder++, layerId = activeLayerId)
+                    is CanvasImage -> item.copy(order = nextOrder++, layerId = activeLayerId)
+                    is TextItem -> item.copy(order = nextOrder++, layerId = activeLayerId)
+                    is LinkItem -> item.copy(order = nextOrder++, layerId = activeLayerId)
                     else -> throw IllegalArgumentException("Unsupported CanvasItem type: ${item::class.java.name}")
                 }
 
@@ -185,9 +189,13 @@ class InfiniteCanvasModel {
 
             if (candidates.isEmpty()) return@withLock null
 
+            val lockedLayerIds = layerManager.getLockedLayerIds()
+            val hiddenLayerIds = layerManager.getHiddenLayerIds()
+
             when (type) {
                 EraserType.STROKE -> {
                     candidates.forEach { item ->
+                        if (lockedLayerIds.contains(item.layerId) || hiddenLayerIds.contains(item.layerId)) return@forEach
                         if (item is Stroke && RectF.intersects(item.bounds, eraserStroke.bounds) &&
                             StrokeGeometry.strokeIntersects(item, eraserStroke)
                         ) {
@@ -210,6 +218,7 @@ class InfiniteCanvasModel {
 
                 EraserType.LASSO -> {
                     candidates.forEach { item ->
+                        if (lockedLayerIds.contains(item.layerId) || hiddenLayerIds.contains(item.layerId)) return@forEach
                         if (!eraserStroke.bounds.contains(item.bounds)) return@forEach
                         val isContained =
                             if (item is Stroke) {
@@ -232,6 +241,7 @@ class InfiniteCanvasModel {
 
                 EraserType.STANDARD -> {
                     candidates.filterIsInstance<Stroke>().forEach { target ->
+                        if (lockedLayerIds.contains(target.layerId) || hiddenLayerIds.contains(target.layerId)) return@forEach
                         if (RectF.intersects(target.bounds, eraserStroke.bounds)) {
                             val newParts = StrokeGeometry.splitStroke(target, eraserStroke)
                             if (newParts.size != 1 || newParts[0] !== target) {
@@ -582,6 +592,7 @@ class InfiniteCanvasModel {
                 regionSize = size,
                 nextStrokeOrder = nextOrder,
                 uuid = uuid,
+                layers = layerManager.getLayers(),
             )
         }
 
@@ -608,6 +619,7 @@ class InfiniteCanvasModel {
             tagIds = state.tagIds
             tagDefinitions = state.tagDefinitions
             uuid = state.uuid
+            layerManager.setLayers(state.layers)
         }
     }
 
@@ -625,6 +637,7 @@ class InfiniteCanvasModel {
             tagDefinitions = data.tagDefinitions
             nextOrder = data.nextStrokeOrder
             uuid = data.uuid
+            layerManager.setLayers(data.layers.map { it.toLayer() })
         }
     }
 
@@ -654,6 +667,7 @@ class InfiniteCanvasModel {
 
         var hit: CanvasItem? = null
         val candidates = ArrayList<CanvasItem>()
+        val unselectableLayerIds = layerManager.getUnselelectableLayerIds()
 
         for (id in regionIds) {
             val region = rm.getRegionReadOnly(id) ?: continue
@@ -663,6 +677,7 @@ class InfiniteCanvasModel {
         candidates.sortByDescending { it.order }
 
         for (item in candidates) {
+            if (unselectableLayerIds.contains(item.layerId)) continue
             if (item.distanceToPoint(x, y) < tolerance) {
                 hit = item
                 break
