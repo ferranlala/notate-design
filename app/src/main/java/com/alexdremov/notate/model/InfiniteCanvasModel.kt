@@ -667,7 +667,7 @@ class InfiniteCanvasModel {
 
         var hit: CanvasItem? = null
         val candidates = ArrayList<CanvasItem>()
-        val unselectableLayerIds = layerManager.getUnselelectableLayerIds()
+        val unselectableLayerIds = layerManager.getUnselectableLayerIds()
 
         for (id in regionIds) {
             val region = rm.getRegionReadOnly(id) ?: continue

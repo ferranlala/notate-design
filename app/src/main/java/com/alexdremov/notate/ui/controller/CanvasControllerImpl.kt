@@ -176,7 +176,7 @@ class CanvasControllerImpl(
     override suspend fun getItemsInRect(rect: RectF): List<CanvasItem> =
         withContext(Dispatchers.Default) {
             val result = ArrayList<CanvasItem>()
-            val unselectableLayerIds = model.layerManager.getUnselelectableLayerIds()
+            val unselectableLayerIds = model.layerManager.getUnselectableLayerIds()
 
             model.visitItemsInRect(rect) { item ->
                 if (unselectableLayerIds.contains(item.layerId)) return@visitItemsInRect
@@ -206,7 +206,7 @@ class CanvasControllerImpl(
             pathPoints = StrokeGeometry.simplifyPoints(pathPoints, 5.0f)
 
             val result = ArrayList<CanvasItem>()
-            val unselectableLayerIds = model.layerManager.getUnselelectableLayerIds()
+            val unselectableLayerIds = model.layerManager.getUnselectableLayerIds()
 
             model.visitItemsInRect(bounds) { item ->
                 if (!bounds.contains(item.bounds)) return@visitItemsInRect

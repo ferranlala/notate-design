@@ -166,7 +166,7 @@ class LayerManager {
      * Returns the set of layer IDs that should be excluded from selection
      * (hidden or locked).
      */
-    fun getUnselelectableLayerIds(): Set<String> =
+    fun getUnselectableLayerIds(): Set<String> =
         synchronized(lock) {
             _layers.value.filter { !it.isVisible || it.isLocked }.map { it.id }.toSet()
         }
