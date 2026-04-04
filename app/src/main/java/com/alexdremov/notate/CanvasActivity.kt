@@ -452,6 +452,12 @@ class CanvasActivity : AppCompatActivity() {
                         binding.canvasView.getController().addStrokes(strokes)
                     }
                 },
+                getLayerManager = {
+                    binding.canvasView.getModel().layerManager
+                },
+                onLayerChanged = {
+                    binding.canvasView.getRenderer().clearAndRefresh()
+                },
             )
         binding.canvasView.onStrokeStarted = {
             activePenPopup?.dismiss()

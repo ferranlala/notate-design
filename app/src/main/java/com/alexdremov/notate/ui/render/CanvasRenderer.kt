@@ -78,6 +78,15 @@ class CanvasRenderer(
     }
 
     /**
+     * Clears all cached tiles and triggers a view invalidation,
+     * forcing a full re-render from the model. Used when layer visibility changes.
+     */
+    fun clearAndRefresh() {
+        tileManager.clear()
+        onTileReady()
+    }
+
+    /**
      * Invalidates tiles intersecting the given bounds.
      * Removes them from the cache, forcing them to be re-rendered from the Model.
      * Used for destructive changes like Undo/Redo.
