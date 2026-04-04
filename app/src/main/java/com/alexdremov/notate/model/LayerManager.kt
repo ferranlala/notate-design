@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.asStateFlow
  */
 class LayerManager {
     private val lock = Any()
+    private var layerCounter = 0L
 
     private val _layers = MutableStateFlow(listOf(Layer.defaultLayer()))
     val layers: StateFlow<List<Layer>> = _layers.asStateFlow()
@@ -53,7 +54,8 @@ class LayerManager {
      */
     fun addLayer(name: String): Layer =
         synchronized(lock) {
-            val id = "layer_${System.currentTimeMillis()}"
+            layerCounter++
+            val id = "layer_${System.currentTimeMillis()}_$layerCounter"
             val layer = Layer(id = id, name = name)
             _layers.value = _layers.value + layer
             _activeLayerId.value = id
