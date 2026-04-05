@@ -220,6 +220,8 @@ class LayerAwareSelectionTest {
 
     @Test
     fun `deleteItemsByLayerId removes all items on the given layer`() = runTest {
+        // Set content bounds before initializeSession so the model picks them up
+        every { regionManager.getContentBounds() } returns RectF(0f, 0f, 100f, 100f)
         model.initializeSession(regionManager)
 
         val layer2 = model.layerManager.addLayer("Layer 2")
@@ -230,9 +232,6 @@ class LayerAwareSelectionTest {
         val stroke2 = createTestStroke(order = 2, bounds = RectF(30f, 30f, 40f, 40f), layerId = layer2.id)
 
         setupRegionWithStrokes(stroke1, stroke2)
-
-        // Set content bounds so deleteItemsByLayerId can find items
-        every { regionManager.getContentBounds() } returns RectF(0f, 0f, 100f, 100f)
 
         // Mock visitItemsInRect to invoke the visitor with the strokes
         coEvery { regionManager.visitItemsInRect(any(), any()) } answers {
@@ -251,13 +250,13 @@ class LayerAwareSelectionTest {
 
     @Test
     fun `deleteItemsByLayerId does nothing when layer has no items`() = runTest {
+        // Set content bounds before initializeSession so the model picks them up
+        every { regionManager.getContentBounds() } returns RectF(0f, 0f, 100f, 100f)
         model.initializeSession(regionManager)
 
         val emptyLayer = model.layerManager.addLayer("Empty")
 
         setupRegionWithStrokes() // No strokes
-
-        every { regionManager.getContentBounds() } returns RectF(0f, 0f, 100f, 100f)
 
         // Mock visitItemsInRect to invoke the visitor with no items
         coEvery { regionManager.visitItemsInRect(any(), any()) } answers { }
