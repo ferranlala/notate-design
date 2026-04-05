@@ -45,6 +45,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.alexdremov.notate.R
+import com.alexdremov.notate.model.Layer
 import com.alexdremov.notate.model.LayerManager
 import kotlinx.coroutines.launch
 
@@ -67,7 +68,7 @@ fun LayersDropdownPanel(
     val layers by layerManager.layers.collectAsState()
     val activeLayerId by layerManager.activeLayerId.collectAsState()
     val scope = rememberCoroutineScope()
-    var layerPendingDelete by remember { mutableStateOf<com.alexdremov.notate.model.Layer?>(null) }
+    var layerPendingDelete by remember { mutableStateOf<Layer?>(null) }
 
     // Confirmation dialog for layer deletion
     layerPendingDelete?.let { layer ->
