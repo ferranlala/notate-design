@@ -58,6 +58,7 @@ import com.alexdremov.notate.ui.settings.LayersDropdownPanel
 import com.alexdremov.notate.util.Logger
 import com.alexdremov.notate.vm.DrawingViewModel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.util.Collections
 import kotlin.math.roundToInt
 
@@ -611,6 +612,7 @@ fun ToolbarItemWrapper(
         } else if (item is ToolbarItem.Widget && item.widgetType == WidgetType.LAYERS) {
             // Layers widget — renders as icon button with dropdown popup
             var showDropdown by remember { mutableStateOf(false) }
+            val coroutineScope = rememberCoroutineScope()
             Box {
                 Box(
                     modifier = Modifier
@@ -637,6 +639,9 @@ fun ToolbarItemWrapper(
                             layerManager = layerManager,
                             onLayerChanged = onLayerChanged,
                             onDismiss = { showDropdown = false },
+                            onMoveSelectionToLayer = canvasController?.let { controller ->
+                                { layerId -> coroutineScope.launch { controller.moveSelectionToLayer(layerId) } }
+                            },
                         )
                     }
                 }

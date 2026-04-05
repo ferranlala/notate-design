@@ -22,4 +22,5 @@
     <string name="pen_style">Pen Style</string>
     <string name="rectangle_selection">Rectangle</string>
     <string name="lasso_selection">Lasso</string>
+    <string name="move_selection_to_layer">Move selection to this layer</string>
 </resources>

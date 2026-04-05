@@ -1232,6 +1232,46 @@ class CanvasControllerImpl(
         }
     }
 
+    override suspend fun moveSelectionToLayer(targetLayerId: String) {
+        operationMutex.withLock {
+            if (!selectionManager.hasSelection()) return@withLock
+
+            val originalItems = fetchSelectedItems()
+            if (originalItems.isEmpty()) return@withLock
+
+            val newItems = originalItems.map { item ->
+                when (item) {
+                    is Stroke -> item.copy(layerId = targetLayerId)
+                    is CanvasImage -> item.copy(layerId = targetLayerId)
+                    is com.alexdremov.notate.model.TextItem -> item.copy(layerId = targetLayerId)
+                    is com.alexdremov.notate.model.LinkItem -> item.copy(layerId = targetLayerId)
+                    else -> item
+                }
+            }
+
+            val bounds = RectF()
+            if (originalItems.isNotEmpty()) {
+                bounds.set(originalItems[0].bounds)
+                for (i in 1 until originalItems.size) bounds.union(originalItems[i].bounds)
+            }
+            bounds.inset(-5f, -5f)
+
+            val committedItems = withContext(Dispatchers.IO) {
+                model.replaceItems(originalItems, newItems)
+            }
+
+            selectionManager.clearSelection()
+            selectionManager.selectAll(committedItems)
+            updatePinnedRegions()
+
+            withContext(Dispatchers.Main) {
+                renderer.invalidateTiles(bounds)
+                renderer.invalidate()
+                onContentChangedListener?.invoke()
+            }
+        }
+    }
+
     private suspend fun fetchSelectedItems(): List<CanvasItem> {
         val items = ArrayList<CanvasItem>()
         val missingIds = ArrayList<Long>()

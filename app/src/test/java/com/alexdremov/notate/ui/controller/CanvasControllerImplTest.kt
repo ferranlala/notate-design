@@ -161,6 +161,41 @@ class CanvasControllerImplTest {
             coVerify { renderer.invalidateTiles(expectedNewBounds) }
         }
 
+    @Test
+    fun `moveSelectionToLayer reassigns selected items to the target layer`() =
+        runTest {
+            val stroke = createTestStroke(1L, RectF(0f, 0f, 10f, 10f))
+            val targetLayerId = "layer-2"
+            val movedStroke = stroke.copy(layerId = targetLayerId)
+
+            controller.selectItem(stroke)
+            coEvery { model.getItem(1L, any()) } returns stroke
+            coEvery { model.replaceItems(listOf(stroke), any()) } returns listOf(movedStroke)
+
+            controller.moveSelectionToLayer(targetLayerId)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            coVerify {
+                model.replaceItems(
+                    listOf(stroke),
+                    match { newItems ->
+                        newItems.size == 1 && (newItems[0] as? Stroke)?.layerId == targetLayerId
+                    },
+                )
+            }
+            coVerify { renderer.invalidateTiles(any()) }
+            verify { renderer.invalidate() }
+        }
+
+    @Test
+    fun `moveSelectionToLayer does nothing when selection is empty`() =
+        runTest {
+            controller.moveSelectionToLayer("layer-2")
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            coVerify(exactly = 0) { model.replaceItems(any(), any()) }
+        }
+
     private fun createTestStroke(
         order: Long,
         bounds: RectF,
