@@ -61,6 +61,15 @@
 
     </RadioGroup>
 
+    <CheckBox
+        android:id="@+id/cb_include_hidden_layers"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Include hidden layers"
+        android:textSize="16sp"
+        android:padding="8dp"
+        android:checked="false" />
+
     <androidx.compose.ui.platform.ComposeView
         android:id="@+id/compose_pdf_settings"
         android:layout_width="match_parent"

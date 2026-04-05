@@ -422,11 +422,11 @@ class CanvasActivity : AppCompatActivity() {
                 onExportRequest = { action ->
                     when (action) {
                         is ExportAction.Export -> {
-                            exportCoordinator.requestExport(action.isVector)
+                            exportCoordinator.requestExport(action.isVector, action.includeHiddenLayers)
                         }
 
                         is ExportAction.Share -> {
-                            exportCoordinator.requestShare(action.isVector)
+                            exportCoordinator.requestShare(action.isVector, action.includeHiddenLayers)
                             sidebarCoordinator.close()
                         }
                     }

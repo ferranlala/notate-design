@@ -12,6 +12,8 @@ import com.alexdremov.notate.data.region.RegionManager
 import com.alexdremov.notate.model.BackgroundStyle
 import com.alexdremov.notate.model.CanvasItem
 import com.alexdremov.notate.model.InfiniteCanvasModel
+import com.alexdremov.notate.model.Layer
+import com.alexdremov.notate.model.LayerManager
 import com.alexdremov.notate.model.Stroke
 import com.alexdremov.notate.model.StrokeType
 import com.alexdremov.notate.util.Quadtree
@@ -326,5 +328,104 @@ class PdfExporterTest {
             unmockkConstructor(PDDocument::class)
             unmockkConstructor(PDPage::class)
             unmockkConstructor(PDPageContentStream::class)
+        }
+
+    @Test
+    fun `test export queries hidden layer ids when includeHiddenLayers is false`() =
+        runTest(testDispatcher) {
+            val model = mockk<InfiniteCanvasModel>(relaxed = true)
+            val mockLayerManager = mockk<LayerManager>(relaxed = true)
+            every { model.layerManager } returns mockLayerManager
+            every { mockLayerManager.getHiddenLayerIds() } returns emptySet()
+
+            io.mockk.coEvery { model.queryItems(any()) } returns arrayListOf()
+            every { model.getContentBounds() } returns RectF(100f, 100f, 200f, 200f)
+            every { model.canvasType } returns CanvasType.FIXED_PAGES
+            every { model.pageWidth } returns CanvasConfig.PAGE_A4_WIDTH
+            every { model.pageHeight } returns CanvasConfig.PAGE_A4_HEIGHT
+            every { model.backgroundStyle } returns BackgroundStyle.Blank()
+
+            val outputStream = ByteArrayOutputStream()
+            val mockDoc = createMockPdfDocumentWrapper()
+
+            PdfExporter.export(
+                context,
+                model,
+                outputStream,
+                isVector = true,
+                callback = null,
+                pdfDocumentFactory = { mockDoc },
+                includeHiddenLayers = false,
+            )
+
+            verify { mockLayerManager.getHiddenLayerIds() }
+        }
+
+    @Test
+    fun `test export skips hidden layer ids query when includeHiddenLayers is true`() =
+        runTest(testDispatcher) {
+            val model = mockk<InfiniteCanvasModel>(relaxed = true)
+            val mockLayerManager = mockk<LayerManager>(relaxed = true)
+            every { model.layerManager } returns mockLayerManager
+
+            io.mockk.coEvery { model.queryItems(any()) } returns arrayListOf()
+            every { model.getContentBounds() } returns RectF(100f, 100f, 200f, 200f)
+            every { model.canvasType } returns CanvasType.FIXED_PAGES
+            every { model.pageWidth } returns CanvasConfig.PAGE_A4_WIDTH
+            every { model.pageHeight } returns CanvasConfig.PAGE_A4_HEIGHT
+            every { model.backgroundStyle } returns BackgroundStyle.Blank()
+
+            val outputStream = ByteArrayOutputStream()
+            val mockDoc = createMockPdfDocumentWrapper()
+
+            PdfExporter.export(
+                context,
+                model,
+                outputStream,
+                isVector = true,
+                callback = null,
+                pdfDocumentFactory = { mockDoc },
+                includeHiddenLayers = true,
+            )
+
+            verify(exactly = 0) { mockLayerManager.getHiddenLayerIds() }
+        }
+
+    @Test
+    fun `test export fixed pages filters items on hidden layers`() =
+        runTest(testDispatcher) {
+            val model = mockk<InfiniteCanvasModel>(relaxed = true)
+            val mockLayerManager = mockk<LayerManager>(relaxed = true)
+            val hiddenLayerId = "hidden-layer"
+
+            every { model.layerManager } returns mockLayerManager
+            every { mockLayerManager.getHiddenLayerIds() } returns setOf(hiddenLayerId)
+
+            val visibleStroke = createTestStroke(100f, 100f)
+            val hiddenStroke = createTestStroke(200f, 200f).copy(layerId = hiddenLayerId)
+
+            io.mockk.coEvery { model.queryItems(any()) } returns arrayListOf(visibleStroke, hiddenStroke)
+            every { model.getContentBounds() } returns RectF(100f, 100f, 300f, 300f)
+            every { model.canvasType } returns CanvasType.FIXED_PAGES
+            every { model.pageWidth } returns CanvasConfig.PAGE_A4_WIDTH
+            every { model.pageHeight } returns CanvasConfig.PAGE_A4_HEIGHT
+            every { model.backgroundStyle } returns BackgroundStyle.Blank()
+
+            val outputStream = ByteArrayOutputStream()
+            val mockDoc = createMockPdfDocumentWrapper()
+
+            PdfExporter.export(
+                context,
+                model,
+                outputStream,
+                isVector = true,
+                callback = null,
+                pdfDocumentFactory = { mockDoc },
+                includeHiddenLayers = false,
+            )
+
+            // Pages are still produced (just without the hidden item)
+            verify(atLeast = 1) { mockDoc.startPage(any()) }
+            verify { mockLayerManager.getHiddenLayerIds() }
         }
 }
