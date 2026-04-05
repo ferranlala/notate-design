@@ -217,4 +217,44 @@ class LayerAwareSelectionTest {
         assertThat(added).isNotNull()
         assertThat(added!!.layerId).isEqualTo(Layer.DEFAULT_LAYER_ID)
     }
+
+    @Test
+    fun `deleteItemsByLayerId removes all items on the given layer`() = runTest {
+        model.initializeSession(regionManager)
+
+        val layer2 = model.layerManager.addLayer("Layer 2")
+
+        // Stroke on default layer
+        val stroke1 = createTestStroke(order = 1, bounds = RectF(10f, 10f, 20f, 20f))
+        // Stroke on layer 2
+        val stroke2 = createTestStroke(order = 2, bounds = RectF(30f, 30f, 40f, 40f), layerId = layer2.id)
+
+        setupRegionWithStrokes(stroke1, stroke2)
+
+        // Set content bounds so deleteItemsByLayerId can find items
+        every { regionManager.getContentBounds() } returns RectF(0f, 0f, 100f, 100f)
+
+        model.deleteItemsByLayerId(layer2.id)
+
+        // Should have removed only the layer 2 items
+        coVerify { regionManager.removeItems(match { items ->
+            items.size == 1 && items[0].layerId == layer2.id
+        }) }
+    }
+
+    @Test
+    fun `deleteItemsByLayerId does nothing when layer has no items`() = runTest {
+        model.initializeSession(regionManager)
+
+        val emptyLayer = model.layerManager.addLayer("Empty")
+
+        setupRegionWithStrokes() // No strokes
+
+        every { regionManager.getContentBounds() } returns RectF(0f, 0f, 100f, 100f)
+
+        model.deleteItemsByLayerId(emptyLayer.id)
+
+        // Should not have called removeItems since there are no items to remove
+        coVerify(exactly = 0) { regionManager.removeItems(any()) }
+    }
 }

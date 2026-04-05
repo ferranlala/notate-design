@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -31,6 +32,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.alexdremov.notate.R
 import com.alexdremov.notate.model.LayerManager
+import kotlinx.coroutines.launch
 
 /**
  * Compose dropdown panel for managing canvas layers.
@@ -58,10 +61,40 @@ import com.alexdremov.notate.model.LayerManager
 fun LayersDropdownPanel(
     layerManager: LayerManager,
     onLayerChanged: () -> Unit,
+    onDeleteLayerContents: suspend (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val layers by layerManager.layers.collectAsState()
     val activeLayerId by layerManager.activeLayerId.collectAsState()
+    val scope = rememberCoroutineScope()
+    var layerPendingDelete by remember { mutableStateOf<com.alexdremov.notate.model.Layer?>(null) }
+
+    // Confirmation dialog for layer deletion
+    layerPendingDelete?.let { layer ->
+        AlertDialog(
+            onDismissRequest = { layerPendingDelete = null },
+            title = { Text("Delete Layer") },
+            text = { Text("Delete \"${layer.name}\" and all its contents? This cannot be undone.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    val id = layer.id
+                    layerPendingDelete = null
+                    scope.launch {
+                        onDeleteLayerContents(id)
+                        layerManager.removeLayer(id)
+                        onLayerChanged()
+                    }
+                }) {
+                    Text("Delete", color = Color.Red)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { layerPendingDelete = null }) {
+                    Text("Cancel")
+                }
+            },
+        )
+    }
 
     Surface(
         shape = RoundedCornerShape(12.dp),
@@ -97,8 +130,7 @@ fun LayersDropdownPanel(
                             layerManager.renameLayer(layer.id, newName)
                         },
                         onDelete = {
-                            layerManager.removeLayer(layer.id)
-                            onLayerChanged()
+                            layerPendingDelete = layer
                         },
                     )
                     if (index < layers.size - 1) {

@@ -300,6 +300,25 @@ class InfiniteCanvasModel {
         deleteItems(strokes)
     }
 
+    /**
+     * Deletes all canvas items belonging to the given layer.
+     * Searches the entire content bounds for items with the matching layerId.
+     */
+    suspend fun deleteItemsByLayerId(layerId: String) {
+        val bounds = getContentBounds()
+        if (bounds.isEmpty) return
+        // Expand slightly to ensure boundary items are included
+        val searchBounds = RectF(bounds)
+        searchBounds.inset(-10f, -10f)
+        val itemsToDelete = mutableListOf<CanvasItem>()
+        visitItemsInRect(searchBounds) { item ->
+            if (item.layerId == layerId) {
+                itemsToDelete.add(item)
+            }
+        }
+        deleteItems(itemsToDelete)
+    }
+
     suspend fun replaceItems(
         oldItems: List<CanvasItem>,
         newItems: List<CanvasItem>,
