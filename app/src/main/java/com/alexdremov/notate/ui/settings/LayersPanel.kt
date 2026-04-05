@@ -1,10 +1,8 @@
 package com.alexdremov.notate.ui.settings
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -52,7 +50,7 @@ import com.alexdremov.notate.model.LayerManager
  * Shown as a popup from a toolbar button.
  *
  * - Tap a layer row to select it as active.
- * - Long-press a layer row for a context menu (rename / delete).
+ * - 3-dots button on each row opens a context menu (rename / delete).
  * - Visibility and lock toggles are inline.
  * - "Add Layer" button at the bottom.
  */
@@ -134,7 +132,6 @@ fun LayersDropdownPanel(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun LayerRow(
     layer: com.alexdremov.notate.model.Layer,
@@ -150,130 +147,140 @@ private fun LayerRow(
     var isRenaming by remember { mutableStateOf(false) }
     var editingName by remember(layer.name) { mutableStateOf(layer.name) }
 
-    Box {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .combinedClickable(
-                    onClick = { onSelect() },
-                    onLongClick = { showContextMenu = true },
-                )
-                .background(
-                    if (isActive) Color(0xFFE8E8E8) else Color.Transparent,
-                )
-                .padding(vertical = 6.dp, horizontal = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onSelect() }
+            .background(
+                if (isActive) Color(0xFFE8E8E8) else Color.Transparent,
+            )
+            .padding(vertical = 6.dp, horizontal = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // Visibility toggle
+        IconButton(
+            onClick = onToggleVisibility,
+            modifier = Modifier.size(32.dp),
         ) {
-            // Visibility toggle
-            IconButton(
-                onClick = onToggleVisibility,
-                modifier = Modifier.size(32.dp),
-            ) {
-                Icon(
-                    painter = painterResource(
-                        id = if (layer.isVisible) R.drawable.ic_visibility else R.drawable.ic_visibility_off,
-                    ),
-                    contentDescription = if (layer.isVisible) "Hide layer" else "Show layer",
-                    modifier = Modifier.size(18.dp),
-                    tint = if (layer.isVisible) Color.Black else Color.Gray,
-                )
-            }
-
-            // Lock toggle
-            IconButton(
-                onClick = onToggleLock,
-                modifier = Modifier.size(32.dp),
-            ) {
-                Icon(
-                    painter = painterResource(
-                        id = if (layer.isLocked) R.drawable.ic_lock else R.drawable.ic_lock_open,
-                    ),
-                    contentDescription = if (layer.isLocked) "Unlock layer" else "Lock layer",
-                    modifier = Modifier.size(18.dp),
-                    tint = if (layer.isLocked) Color.Black else Color.Gray,
-                )
-            }
-
-            Spacer(modifier = Modifier.width(4.dp))
-
-            // Layer name: inline rename or label
-            if (isRenaming) {
-                BasicTextField(
-                    value = editingName,
-                    onValueChange = { editingName = it },
-                    modifier = Modifier
-                        .weight(1f)
-                        .border(1.dp, Color.Black, RoundedCornerShape(4.dp))
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
-                    textStyle = TextStyle(fontSize = 14.sp),
-                    singleLine = true,
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = "Done",
-                    modifier = Modifier
-                        .clickable {
-                            if (editingName.isNotBlank()) {
-                                onRename(editingName)
-                            }
-                            isRenaming = false
-                        }
-                        .padding(4.dp),
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = FontWeight.Bold,
-                )
-            } else {
-                Text(
-                    text = layer.name,
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
-                        textDecoration = if (!layer.isVisible) TextDecoration.LineThrough else TextDecoration.None,
-                        color = if (layer.isVisible) Color.Black else Color.Gray,
-                    ),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
+            Icon(
+                painter = painterResource(
+                    id = if (layer.isVisible) R.drawable.ic_visibility else R.drawable.ic_visibility_off,
+                ),
+                contentDescription = if (layer.isVisible) "Hide layer" else "Show layer",
+                modifier = Modifier.size(18.dp),
+                tint = if (layer.isVisible) Color.Black else Color.Gray,
+            )
         }
 
-        // Context menu (shown on long press)
-        DropdownMenu(
-            expanded = showContextMenu,
-            onDismissRequest = { showContextMenu = false },
+        // Lock toggle
+        IconButton(
+            onClick = onToggleLock,
+            modifier = Modifier.size(32.dp),
         ) {
-            DropdownMenuItem(
-                text = { Text("Rename") },
-                onClick = {
-                    showContextMenu = false
-                    isRenaming = true
-                },
-                leadingIcon = {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_edit),
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                    )
-                },
+            Icon(
+                painter = painterResource(
+                    id = if (layer.isLocked) R.drawable.ic_lock else R.drawable.ic_lock_open,
+                ),
+                contentDescription = if (layer.isLocked) "Unlock layer" else "Lock layer",
+                modifier = Modifier.size(18.dp),
+                tint = if (layer.isLocked) Color.Black else Color.Gray,
             )
-            if (canDelete) {
-                DropdownMenuItem(
-                    text = { Text("Delete", color = Color.Red) },
-                    onClick = {
-                        showContextMenu = false
-                        onDelete()
-                    },
-                    leadingIcon = {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_delete),
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp),
-                            tint = Color.Red,
+        }
+
+        Spacer(modifier = Modifier.width(4.dp))
+
+        // Layer name: inline rename or label
+        if (isRenaming) {
+            BasicTextField(
+                value = editingName,
+                onValueChange = { editingName = it },
+                modifier = Modifier
+                    .weight(1f)
+                    .border(1.dp, Color.Black, RoundedCornerShape(4.dp))
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                textStyle = TextStyle(fontSize = 14.sp),
+                singleLine = true,
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                text = "Done",
+                modifier = Modifier
+                    .clickable {
+                        if (editingName.isNotBlank()) {
+                            onRename(editingName)
+                        }
+                        isRenaming = false
+                    }
+                    .padding(4.dp),
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.Bold,
+            )
+        } else {
+            Text(
+                text = layer.name,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
+                    textDecoration = if (!layer.isVisible) TextDecoration.LineThrough else TextDecoration.None,
+                    color = if (layer.isVisible) Color.Black else Color.Gray,
+                ),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+
+            // 3-dots menu button
+            Box {
+                IconButton(
+                    onClick = { showContextMenu = true },
+                    modifier = Modifier.size(32.dp),
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_more_vert),
+                        contentDescription = "Layer options",
+                        modifier = Modifier.size(18.dp),
+                        tint = Color.Gray,
+                    )
+                }
+
+                // Context menu
+                DropdownMenu(
+                    expanded = showContextMenu,
+                    onDismissRequest = { showContextMenu = false },
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Rename") },
+                        onClick = {
+                            showContextMenu = false
+                            isRenaming = true
+                        },
+                        leadingIcon = {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_edit),
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                            )
+                        },
+                    )
+                    if (canDelete) {
+                        DropdownMenuItem(
+                            text = { Text("Delete", color = Color.Red) },
+                            onClick = {
+                                showContextMenu = false
+                                onDelete()
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_delete),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                    tint = Color.Red,
+                                )
+                            },
                         )
-                    },
-                )
+                    }
+                }
             }
         }
     }
