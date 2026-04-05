@@ -1250,10 +1250,8 @@ class CanvasControllerImpl(
             }
 
             val bounds = RectF()
-            if (originalItems.isNotEmpty()) {
-                bounds.set(originalItems[0].bounds)
-                for (i in 1 until originalItems.size) bounds.union(originalItems[i].bounds)
-            }
+            bounds.set(originalItems[0].bounds)
+            for (i in 1 until originalItems.size) bounds.union(originalItems[i].bounds)
             bounds.inset(-5f, -5f)
 
             val committedItems = withContext(Dispatchers.IO) {
