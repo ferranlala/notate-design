@@ -3,6 +3,7 @@ package com.alexdremov.notate.ui.settings
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -211,15 +212,12 @@ private fun LayerRow(
                 Text(
                     text = "Done",
                     modifier = Modifier
-                        .combinedClickable(
-                            onClick = {
-                                if (editingName.isNotBlank()) {
-                                    onRename(editingName)
-                                }
-                                isRenaming = false
-                            },
-                            onLongClick = {},
-                        )
+                        .clickable {
+                            if (editingName.isNotBlank()) {
+                                onRename(editingName)
+                            }
+                            isRenaming = false
+                        }
                         .padding(4.dp),
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.Bold,
@@ -254,7 +252,7 @@ private fun LayerRow(
                 },
                 leadingIcon = {
                     Icon(
-                        painter = painterResource(id = R.drawable.ic_content_paste),
+                        painter = painterResource(id = R.drawable.ic_edit),
                         contentDescription = null,
                         modifier = Modifier.size(18.dp),
                     )
