@@ -234,6 +234,13 @@ class LayerAwareSelectionTest {
         // Set content bounds so deleteItemsByLayerId can find items
         every { regionManager.getContentBounds() } returns RectF(0f, 0f, 100f, 100f)
 
+        // Mock visitItemsInRect to invoke the visitor with the strokes
+        coEvery { regionManager.visitItemsInRect(any(), any()) } answers {
+            val visitor = secondArg<(CanvasItem) -> Unit>()
+            visitor(stroke1)
+            visitor(stroke2)
+        }
+
         model.deleteItemsByLayerId(layer2.id)
 
         // Should have removed only the layer 2 items
@@ -251,6 +258,9 @@ class LayerAwareSelectionTest {
         setupRegionWithStrokes() // No strokes
 
         every { regionManager.getContentBounds() } returns RectF(0f, 0f, 100f, 100f)
+
+        // Mock visitItemsInRect to invoke the visitor with no items
+        coEvery { regionManager.visitItemsInRect(any(), any()) } answers { }
 
         model.deleteItemsByLayerId(emptyLayer.id)
 

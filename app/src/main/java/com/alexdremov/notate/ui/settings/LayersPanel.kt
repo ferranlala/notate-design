@@ -167,7 +167,7 @@ fun LayersDropdownPanel(
 
 @Composable
 private fun LayerRow(
-    layer: com.alexdremov.notate.model.Layer,
+    layer: Layer,
     isActive: Boolean,
     canDelete: Boolean,
     onSelect: () -> Unit,
