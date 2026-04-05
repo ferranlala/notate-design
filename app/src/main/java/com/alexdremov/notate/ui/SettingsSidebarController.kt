@@ -19,14 +19,12 @@ import androidx.compose.ui.unit.dp
 import com.alexdremov.notate.R
 import com.alexdremov.notate.config.CanvasConfig
 import com.alexdremov.notate.model.BackgroundStyle
-import com.alexdremov.notate.model.LayerManager
 import com.alexdremov.notate.ui.export.ExportAction
 import com.alexdremov.notate.ui.pxToMm
 import com.alexdremov.notate.ui.settings.InputSettingsPanel
 import com.alexdremov.notate.ui.settings.InputSettingsState
 import com.alexdremov.notate.ui.settings.InterfaceSettingsPanel
 import com.alexdremov.notate.ui.settings.InterfaceSettingsState
-import com.alexdremov.notate.ui.settings.LayersPanel
 import com.alexdremov.notate.ui.theme.NotateTheme
 import com.alexdremov.notate.vm.DrawingViewModel
 import kotlin.math.roundToInt
@@ -41,8 +39,6 @@ class SettingsSidebarController(
     private val onExportRequest: (ExportAction) -> Unit,
     private val onEditToolbar: () -> Unit,
     private val onGeneratePatterns: (com.alexdremov.notate.util.PatternGenerator.PatternType, Float) -> Unit,
-    private val getLayerManager: () -> LayerManager?,
-    private val onLayerChanged: () -> Unit,
 ) {
     private val wrapperView: View = LayoutInflater.from(context).inflate(R.layout.sidebar_layout_wrapper, container, false)
     private val contentFrame: FrameLayout = wrapperView.findViewById(R.id.sidebar_content)
@@ -70,10 +66,6 @@ class SettingsSidebarController(
             showBackgroundSettings()
         }
 
-        mainMenuView.findViewById<View>(R.id.menu_item_layers).setOnClickListener {
-            showLayersPanel()
-        }
-
         mainMenuView.findViewById<View>(R.id.menu_item_writing).setOnClickListener {
             showWritingMenu()
         }
@@ -89,32 +81,6 @@ class SettingsSidebarController(
         mainMenuView.findViewById<View>(R.id.menu_item_debug).setOnClickListener {
             showDebugMenu()
         }
-    }
-
-    private fun showLayersPanel() {
-        val layerManager = getLayerManager() ?: return
-
-        contentFrame.removeAllViews()
-
-        tvTitle.text = "Layers"
-        btnBack.visibility = View.VISIBLE
-
-        val composeView =
-            ComposeView(context).apply {
-                setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
-                setContent {
-                    NotateTheme {
-                        Surface(color = Color.White) {
-                            LayersPanel(
-                                layerManager = layerManager,
-                                onLayerChanged = onLayerChanged,
-                            )
-                        }
-                    }
-                }
-            }
-
-        contentFrame.addView(composeView)
     }
 
     private fun showWritingMenu() {

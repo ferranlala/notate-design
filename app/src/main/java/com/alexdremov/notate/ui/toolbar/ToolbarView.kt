@@ -54,6 +54,7 @@ import com.alexdremov.notate.model.*
 import com.alexdremov.notate.model.InfiniteCanvasModel
 import com.alexdremov.notate.ui.controller.CanvasController
 import com.alexdremov.notate.ui.navigation.CompactPageNavigation
+import com.alexdremov.notate.ui.settings.LayersDropdownPanel
 import com.alexdremov.notate.util.Logger
 import com.alexdremov.notate.vm.DrawingViewModel
 import kotlinx.coroutines.delay
@@ -69,6 +70,8 @@ fun MainToolbar(
     onToolClick: (ToolbarItem, Rect) -> Unit,
     onActionClick: (ActionType) -> Unit,
     onOpenSidebar: () -> Unit,
+    layerManager: LayerManager? = null,
+    onLayerChanged: () -> Unit = {},
     onToolbarExpandStart: () -> Unit = {},
     onToolbarExpanded: () -> Unit = {},
     onToolbarCollapsed: () -> Unit = {},
@@ -303,6 +306,13 @@ fun MainToolbar(
                             },
                         )
 
+                        LayersButton(
+                            layerManager = layerManager,
+                            onLayerChanged = onLayerChanged,
+                            canProcessClick = { canProcessClick() },
+                            onInteraction = onInteraction,
+                        )
+
                         SettingsButton(onClick = {
                             if (canProcessClick()) {
                                 onInteraction()
@@ -399,6 +409,13 @@ fun MainToolbar(
                                 onInteraction()
                                 viewModel.removeToolbarItem(it)
                             },
+                        )
+
+                        LayersButton(
+                            layerManager = layerManager,
+                            onLayerChanged = onLayerChanged,
+                            canProcessClick = { canProcessClick() },
+                            onInteraction = onInteraction,
                         )
 
                         SettingsButton(onClick = {
@@ -657,6 +674,50 @@ fun ToolbarItemWrapper(
                         modifier = Modifier.size(16.dp),
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun LayersButton(
+    layerManager: LayerManager?,
+    onLayerChanged: () -> Unit,
+    canProcessClick: () -> Boolean,
+    onInteraction: () -> Unit,
+) {
+    var showDropdown by remember { mutableStateOf(false) }
+
+    Box {
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .clickable {
+                    if (canProcessClick()) {
+                        onInteraction()
+                        showDropdown = !showDropdown
+                    }
+                },
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.ic_layers),
+                contentDescription = "Layers",
+                tint = Color.Black,
+            )
+        }
+
+        if (showDropdown && layerManager != null) {
+            Popup(
+                alignment = Alignment.TopStart,
+                onDismissRequest = { showDropdown = false },
+                properties = PopupProperties(focusable = true, dismissOnBackPress = true, dismissOnClickOutside = true),
+            ) {
+                LayersDropdownPanel(
+                    layerManager = layerManager,
+                    onLayerChanged = onLayerChanged,
+                    onDismiss = { showDropdown = false },
+                )
             }
         }
     }

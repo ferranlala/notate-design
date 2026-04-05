@@ -389,6 +389,10 @@ class CanvasActivity : AppCompatActivity() {
                             sidebarCoordinator.open()
                             sidebarController.showMainMenu()
                         },
+                        layerManager = binding.canvasView.getModel().layerManager,
+                        onLayerChanged = {
+                            binding.canvasView.getRenderer().clearAndRefresh()
+                        },
                         onToolbarExpandStart = { toolbarCoordinator.savePosition() },
                         onToolbarExpanded = {
                             toolbarCoordinator.ensureOnScreen()
@@ -451,12 +455,6 @@ class CanvasActivity : AppCompatActivity() {
                             )
                         binding.canvasView.getController().addStrokes(strokes)
                     }
-                },
-                getLayerManager = {
-                    binding.canvasView.getModel().layerManager
-                },
-                onLayerChanged = {
-                    binding.canvasView.getRenderer().clearAndRefresh()
                 },
             )
         binding.canvasView.onStrokeStarted = {
