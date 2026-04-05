@@ -395,6 +395,10 @@ object PreferencesManager {
             com.alexdremov.notate.model.ToolbarItem
                 .Widget(com.alexdremov.notate.model.WidgetType.PAGE_NAVIGATION),
         )
+        items.add(
+            com.alexdremov.notate.model.ToolbarItem
+                .Widget(com.alexdremov.notate.model.WidgetType.LAYERS),
+        )
         return items
     }
 

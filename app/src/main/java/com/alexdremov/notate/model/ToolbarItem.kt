@@ -60,4 +60,5 @@ enum class ActionType {
 @Serializable
 enum class WidgetType {
     PAGE_NAVIGATION,
+    LAYERS,
 }

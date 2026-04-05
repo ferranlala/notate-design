@@ -229,6 +229,8 @@ fun MainToolbar(
                             canvasController = canvasController,
                             canvasModel = canvasModel,
                             isHorizontal = true,
+                            layerManager = layerManager,
+                            onLayerChanged = onLayerChanged,
                             onSlotPositioned = { index, center -> slotCenters[index] = center },
                             onDragStart = { item ->
                                 draggingItem = item
@@ -306,13 +308,6 @@ fun MainToolbar(
                             },
                         )
 
-                        LayersButton(
-                            layerManager = layerManager,
-                            onLayerChanged = onLayerChanged,
-                            canProcessClick = { canProcessClick() },
-                            onInteraction = onInteraction,
-                        )
-
                         SettingsButton(onClick = {
                             if (canProcessClick()) {
                                 onInteraction()
@@ -343,6 +338,8 @@ fun MainToolbar(
                             canvasController = canvasController,
                             canvasModel = canvasModel,
                             isHorizontal = false,
+                            layerManager = layerManager,
+                            onLayerChanged = onLayerChanged,
                             onSlotPositioned = { index, center -> slotCenters[index] = center },
                             onDragStart = { item ->
                                 draggingItem = item
@@ -411,13 +408,6 @@ fun MainToolbar(
                             },
                         )
 
-                        LayersButton(
-                            layerManager = layerManager,
-                            onLayerChanged = onLayerChanged,
-                            canProcessClick = { canProcessClick() },
-                            onInteraction = onInteraction,
-                        )
-
                         SettingsButton(onClick = {
                             if (canProcessClick()) {
                                 onInteraction()
@@ -460,6 +450,8 @@ fun DraggableItems(
     canvasController: CanvasController?,
     canvasModel: InfiniteCanvasModel?,
     isHorizontal: Boolean,
+    layerManager: LayerManager?,
+    onLayerChanged: () -> Unit,
     onSlotPositioned: (Int, Offset) -> Unit,
     onDragStart: (ToolbarItem) -> Unit,
     onDrag: (Offset) -> Unit,
@@ -508,6 +500,8 @@ fun DraggableItems(
                     canvasController = canvasController,
                     canvasModel = canvasModel,
                     isHorizontal = isHorizontal,
+                    layerManager = layerManager,
+                    onLayerChanged = onLayerChanged,
                     onClick = { rect ->
                         if (item is ToolbarItem.Action) {
                             onActionClick(item.actionType)
@@ -560,6 +554,8 @@ fun ToolbarItemWrapper(
     canvasController: CanvasController?,
     canvasModel: InfiniteCanvasModel?,
     isHorizontal: Boolean,
+    layerManager: LayerManager?,
+    onLayerChanged: () -> Unit,
     onClick: (Rect) -> Unit,
     onRemove: () -> Unit,
     modifier: Modifier = Modifier,
@@ -611,6 +607,39 @@ fun ToolbarItemWrapper(
             } else {
                 // Fallback icon
                 Icon(painter = painterResource(R.drawable.ic_chevron_right), contentDescription = "Page Nav")
+            }
+        } else if (item is ToolbarItem.Widget && item.widgetType == WidgetType.LAYERS) {
+            // Layers widget — renders as icon button with dropdown popup
+            var showDropdown by remember { mutableStateOf(false) }
+            Box {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clickable(enabled = !isEditMode) {
+                            itemBounds?.let { onClick(it) }
+                            showDropdown = !showDropdown
+                        },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_layers),
+                        contentDescription = "Layers",
+                        tint = Color.Black,
+                    )
+                }
+                if (showDropdown && layerManager != null) {
+                    Popup(
+                        alignment = Alignment.TopStart,
+                        onDismissRequest = { showDropdown = false },
+                        properties = PopupProperties(focusable = true, dismissOnBackPress = true, dismissOnClickOutside = true),
+                    ) {
+                        LayersDropdownPanel(
+                            layerManager = layerManager,
+                            onLayerChanged = onLayerChanged,
+                            onDismiss = { showDropdown = false },
+                        )
+                    }
+                }
             }
         } else {
             // Standard Icon Item
@@ -674,50 +703,6 @@ fun ToolbarItemWrapper(
                         modifier = Modifier.size(16.dp),
                     )
                 }
-            }
-        }
-    }
-}
-
-@Composable
-fun LayersButton(
-    layerManager: LayerManager?,
-    onLayerChanged: () -> Unit,
-    canProcessClick: () -> Boolean,
-    onInteraction: () -> Unit,
-) {
-    var showDropdown by remember { mutableStateOf(false) }
-
-    Box {
-        Box(
-            modifier = Modifier
-                .size(48.dp)
-                .clickable {
-                    if (canProcessClick()) {
-                        onInteraction()
-                        showDropdown = !showDropdown
-                    }
-                },
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                painter = painterResource(R.drawable.ic_layers),
-                contentDescription = "Layers",
-                tint = Color.Black,
-            )
-        }
-
-        if (showDropdown && layerManager != null) {
-            Popup(
-                alignment = Alignment.TopStart,
-                onDismissRequest = { showDropdown = false },
-                properties = PopupProperties(focusable = true, dismissOnBackPress = true, dismissOnClickOutside = true),
-            ) {
-                LayersDropdownPanel(
-                    layerManager = layerManager,
-                    onLayerChanged = onLayerChanged,
-                    onDismiss = { showDropdown = false },
-                )
             }
         }
     }
@@ -788,6 +773,9 @@ fun RenderToolbarItemIcon(item: ToolbarItem) {
             when (item.widgetType) {
                 WidgetType.PAGE_NAVIGATION -> {
                     Icon(painter = painterResource(R.drawable.ic_chevron_right), contentDescription = "Page Nav", tint = Color.Black)
+                }
+                WidgetType.LAYERS -> {
+                    Icon(painter = painterResource(R.drawable.ic_layers), contentDescription = "Layers", tint = Color.Black)
                 }
             }
         }
@@ -911,6 +899,13 @@ fun ToolbarEditPanel(
                     onClick = { viewModel.addToolbarItem(ToolbarItem.Widget(WidgetType.PAGE_NAVIGATION)) },
                 )
             }
+
+            // Add Layers
+            AddItemButton(
+                item = ToolbarItem.Widget(WidgetType.LAYERS),
+                label = stringResource(R.string.layers_tool),
+                onClick = { viewModel.addToolbarItem(ToolbarItem.Widget(WidgetType.LAYERS)) },
+            )
         }
 
         Spacer(modifier = Modifier.height(8.dp))
