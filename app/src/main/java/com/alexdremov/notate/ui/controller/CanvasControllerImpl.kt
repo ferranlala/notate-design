@@ -1262,7 +1262,12 @@ class CanvasControllerImpl(
             selectionManager.selectAll(committedItems)
             updatePinnedRegions()
 
+            val committedItemIds = committedItems.map { it.id }.toSet()
+
             withContext(Dispatchers.Main) {
+                renderer.setHiddenItems(committedItemIds)
+                renderer.hideItemsInCache(committedItemIds)
+                generateSelectionImposter()
                 renderer.invalidateTiles(bounds)
                 renderer.invalidate()
                 onContentChangedListener?.invoke()
