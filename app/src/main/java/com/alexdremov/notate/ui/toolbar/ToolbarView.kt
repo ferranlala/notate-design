@@ -618,7 +618,6 @@ fun ToolbarItemWrapper(
         } else if (item is ToolbarItem.Widget && item.widgetType == WidgetType.LAYERS) {
             // Layers widget — renders as icon button with dropdown popup
             var showDropdown by remember { mutableStateOf(false) }
-            val coroutineScope = rememberCoroutineScope()
             Box {
                 Box(
                     modifier = Modifier
@@ -646,9 +645,6 @@ fun ToolbarItemWrapper(
                             onLayerChanged = onLayerChanged,
                             onDeleteLayer = onDeleteLayer,
                             onDismiss = { showDropdown = false },
-                            onMoveSelectionToLayer = canvasController?.let { controller ->
-                                { layerId -> coroutineScope.launch { controller.moveSelectionToLayer(layerId) } }
-                            },
                         )
                     }
                 }
