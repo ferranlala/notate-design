@@ -57,11 +57,17 @@ class SelectionActionPopup(
         }
 
         if (onMoveToLayer != null && layerProvider != null) {
-            binding.dividerMove.visibility = View.VISIBLE
-            binding.btnMoveToLayer.visibility = View.VISIBLE
             binding.btnMoveToLayer.setOnClickListener { anchor ->
                 showLayerPicker(anchor)
             }
+        }
+    }
+
+    private fun updateMoveButtonVisibility() {
+        if (onMoveToLayer != null && layerProvider != null) {
+            val hasMultipleLayers = layerProvider.invoke().size >= 2
+            binding.dividerMove.visibility = if (hasMultipleLayers) View.VISIBLE else View.GONE
+            binding.btnMoveToLayer.visibility = if (hasMultipleLayers) View.VISIBLE else View.GONE
         }
     }
 
@@ -111,6 +117,7 @@ class SelectionActionPopup(
         matrix: android.graphics.Matrix,
     ) {
         isVisible = true
+        updateMoveButtonVisibility()
         container.visibility = View.VISIBLE
         binding.root.visibility = View.VISIBLE
         isSizeValid = false // Force re-measure on show
