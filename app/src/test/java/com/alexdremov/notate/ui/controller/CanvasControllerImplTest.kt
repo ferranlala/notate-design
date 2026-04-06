@@ -188,6 +188,35 @@ class CanvasControllerImplTest {
         }
 
     @Test
+    fun `moveSelectionToLayer reassigns selected text items to the target layer`() =
+        runTest {
+            val textItem = mockk<TextItem>()
+            val movedTextItem = mockk<TextItem>()
+            val targetLayerId = "layer-2"
+
+            every { textItem.strokeOrder } returns 2L
+            every { movedTextItem.layerId } returns targetLayerId
+
+            controller.selectItem(textItem)
+            coEvery { model.getItem(2L, any()) } returns textItem
+            coEvery { model.replaceItems(listOf(textItem), any()) } returns listOf(movedTextItem)
+
+            controller.moveSelectionToLayer(targetLayerId)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            coVerify {
+                model.replaceItems(
+                    listOf(textItem),
+                    match { newItems ->
+                        newItems.size == 1 && (newItems[0] as? TextItem)?.layerId == targetLayerId
+                    },
+                )
+            }
+            coVerify { renderer.invalidateTiles(any()) }
+            verify { renderer.invalidate() }
+        }
+
+    @Test
     fun `moveSelectionToLayer does nothing when selection is empty`() =
         runTest {
             controller.moveSelectionToLayer("layer-2")
