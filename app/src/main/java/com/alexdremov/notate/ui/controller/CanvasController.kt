@@ -148,6 +148,11 @@ interface CanvasController {
 
     suspend fun commitMoveSelection(shouldReselect: Boolean = true)
 
+    /**
+     * Moves all currently selected items to the specified layer.
+     */
+    suspend fun moveSelectionToLayer(targetLayerId: String)
+
     fun getSelectionManager(): SelectionManager
 
     fun setOnContentChangedListener(listener: () -> Unit)

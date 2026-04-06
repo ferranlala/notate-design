@@ -38,6 +38,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
@@ -64,6 +65,7 @@ fun LayersDropdownPanel(
     onLayerChanged: () -> Unit,
     onDeleteLayer: suspend (String) -> Unit,
     onDismiss: () -> Unit,
+    onMoveSelectionToLayer: ((layerId: String) -> Unit)? = null,
 ) {
     val layers by layerManager.layers.collectAsState()
     val activeLayerId by layerManager.activeLayerId.collectAsState()
@@ -132,6 +134,9 @@ fun LayersDropdownPanel(
                         onDelete = {
                             layerPendingDelete = layer
                         },
+                        onMoveSelectionToLayer = onMoveSelectionToLayer?.let { callback ->
+                            { callback(layer.id) }
+                        },
                     )
                     if (index < layers.size - 1) {
                         HorizontalDivider(color = Color(0xFFE0E0E0))
@@ -174,6 +179,7 @@ private fun LayerRow(
     onToggleLock: () -> Unit,
     onRename: (String) -> Unit,
     onDelete: () -> Unit,
+    onMoveSelectionToLayer: (() -> Unit)? = null,
 ) {
     var showContextMenu by remember { mutableStateOf(false) }
     var isRenaming by remember { mutableStateOf(false) }
@@ -295,6 +301,22 @@ private fun LayerRow(
                             )
                         },
                     )
+                    if (onMoveSelectionToLayer != null) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.move_selection_to_layer)) },
+                            onClick = {
+                                showContextMenu = false
+                                onMoveSelectionToLayer()
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_layers),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                            },
+                        )
+                    }
                     if (canDelete) {
                         DropdownMenuItem(
                             text = { Text("Delete", color = Color.Red) },
