@@ -1245,7 +1245,9 @@ class CanvasControllerImpl(
                     is CanvasImage -> item.copy(layerId = targetLayerId)
                     is com.alexdremov.notate.model.TextItem -> item.copy(layerId = targetLayerId)
                     is com.alexdremov.notate.model.LinkItem -> item.copy(layerId = targetLayerId)
-                    else -> item
+                    else -> throw IllegalArgumentException(
+                        "Unsupported CanvasItem subtype in moveSelectionToLayer: ${item::class.qualifiedName}"
+                    )
                 }
             }
 
