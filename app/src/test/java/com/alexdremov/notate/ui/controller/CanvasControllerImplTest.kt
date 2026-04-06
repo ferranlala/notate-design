@@ -190,12 +190,17 @@ class CanvasControllerImplTest {
     @Test
     fun `moveSelectionToLayer reassigns selected text items to the target layer`() =
         runTest {
-            val textItem = mockk<TextItem>()
-            val movedTextItem = mockk<TextItem>()
+            val textBounds = RectF(0f, 0f, 100f, 50f)
+            val textItem = TextItem(
+                text = "Hello",
+                fontSize = 16f,
+                color = 0,
+                logicalBounds = textBounds,
+                bounds = textBounds,
+                order = 2L,
+            )
             val targetLayerId = "layer-2"
-
-            every { textItem.strokeOrder } returns 2L
-            every { movedTextItem.layerId } returns targetLayerId
+            val movedTextItem = textItem.copy(layerId = targetLayerId)
 
             controller.selectItem(textItem)
             coEvery { model.getItem(2L, any()) } returns textItem
