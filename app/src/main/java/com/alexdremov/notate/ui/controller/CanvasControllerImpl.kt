@@ -12,7 +12,9 @@ import com.alexdremov.notate.model.CanvasImage
 import com.alexdremov.notate.model.CanvasItem
 import com.alexdremov.notate.model.EraserType
 import com.alexdremov.notate.model.InfiniteCanvasModel
+import com.alexdremov.notate.model.LinkItem
 import com.alexdremov.notate.model.Stroke
+import com.alexdremov.notate.model.TextItem
 import com.alexdremov.notate.ui.render.CanvasRenderer
 import com.alexdremov.notate.util.ClipboardManager
 import com.alexdremov.notate.util.StrokeGeometry
@@ -1243,8 +1245,8 @@ class CanvasControllerImpl(
                 when (item) {
                     is Stroke -> item.copy(layerId = targetLayerId)
                     is CanvasImage -> item.copy(layerId = targetLayerId)
-                    is com.alexdremov.notate.model.TextItem -> item.copy(layerId = targetLayerId)
-                    is com.alexdremov.notate.model.LinkItem -> item.copy(layerId = targetLayerId)
+                    is TextItem -> item.copy(layerId = targetLayerId)
+                    is LinkItem -> item.copy(layerId = targetLayerId)
                     else -> throw IllegalArgumentException(
                         "Unsupported CanvasItem subtype in moveSelectionToLayer: ${item::class.qualifiedName}"
                     )
@@ -1264,11 +1266,9 @@ class CanvasControllerImpl(
             selectionManager.selectAll(committedItems)
             updatePinnedRegions()
 
-            val committedItemIds = committedItems.map { it.id }.toSet()
-
             withContext(Dispatchers.Main) {
-                renderer.setHiddenItems(committedItemIds)
-                renderer.hideItemsInCache(committedItemIds)
+                renderer.setHiddenItems(selectionManager.getSelectedIds())
+                renderer.hideItemsInCache(committedItems)
                 generateSelectionImposter()
                 renderer.invalidateTiles(bounds)
                 renderer.invalidate()
