@@ -72,7 +72,7 @@ fun MainToolbar(
     onOpenSidebar: () -> Unit,
     layerManager: LayerManager? = null,
     onLayerChanged: () -> Unit = {},
-    onDeleteLayerContents: suspend (String) -> Unit = {},
+    onDeleteLayer: suspend (String) -> Unit = {},
     onToolbarExpandStart: () -> Unit = {},
     onToolbarExpanded: () -> Unit = {},
     onToolbarCollapsed: () -> Unit = {},
@@ -232,7 +232,7 @@ fun MainToolbar(
                             isHorizontal = true,
                             layerManager = layerManager,
                             onLayerChanged = onLayerChanged,
-                            onDeleteLayerContents = onDeleteLayerContents,
+                            onDeleteLayer = onDeleteLayer,
                             onSlotPositioned = { index, center -> slotCenters[index] = center },
                             onDragStart = { item ->
                                 draggingItem = item
@@ -342,7 +342,7 @@ fun MainToolbar(
                             isHorizontal = false,
                             layerManager = layerManager,
                             onLayerChanged = onLayerChanged,
-                            onDeleteLayerContents = onDeleteLayerContents,
+                            onDeleteLayer = onDeleteLayer,
                             onSlotPositioned = { index, center -> slotCenters[index] = center },
                             onDragStart = { item ->
                                 draggingItem = item
@@ -455,7 +455,7 @@ fun DraggableItems(
     isHorizontal: Boolean,
     layerManager: LayerManager?,
     onLayerChanged: () -> Unit,
-    onDeleteLayerContents: suspend (String) -> Unit,
+    onDeleteLayer: suspend (String) -> Unit,
     onSlotPositioned: (Int, Offset) -> Unit,
     onDragStart: (ToolbarItem) -> Unit,
     onDrag: (Offset) -> Unit,
@@ -506,7 +506,7 @@ fun DraggableItems(
                     isHorizontal = isHorizontal,
                     layerManager = layerManager,
                     onLayerChanged = onLayerChanged,
-                    onDeleteLayerContents = onDeleteLayerContents,
+                    onDeleteLayer = onDeleteLayer,
                     onClick = { rect ->
                         if (item is ToolbarItem.Action) {
                             onActionClick(item.actionType)
@@ -561,7 +561,7 @@ fun ToolbarItemWrapper(
     isHorizontal: Boolean,
     layerManager: LayerManager?,
     onLayerChanged: () -> Unit,
-    onDeleteLayerContents: suspend (String) -> Unit,
+    onDeleteLayer: suspend (String) -> Unit,
     onClick: (Rect) -> Unit,
     onRemove: () -> Unit,
     modifier: Modifier = Modifier,
@@ -642,7 +642,7 @@ fun ToolbarItemWrapper(
                         LayersDropdownPanel(
                             layerManager = layerManager,
                             onLayerChanged = onLayerChanged,
-                            onDeleteLayerContents = onDeleteLayerContents,
+                            onDeleteLayer = onDeleteLayer,
                             onDismiss = { showDropdown = false },
                         )
                     }

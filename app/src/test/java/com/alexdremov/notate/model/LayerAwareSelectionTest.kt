@@ -266,4 +266,91 @@ class LayerAwareSelectionTest {
         // Should not have called removeItems since there are no items to remove
         coVerify(exactly = 0) { regionManager.removeItems(any()) }
     }
+
+    @Test
+    fun `deleteLayerWithContents removes layer and items`() = runTest {
+        every { regionManager.getContentBounds() } returns RectF(0f, 0f, 100f, 100f)
+        model.initializeSession(regionManager)
+
+        val layer2 = model.layerManager.addLayer("Layer 2")
+
+        val stroke1 = createTestStroke(order = 1, bounds = RectF(10f, 10f, 20f, 20f))
+        val stroke2 = createTestStroke(order = 2, bounds = RectF(30f, 30f, 40f, 40f), layerId = layer2.id)
+
+        setupRegionWithStrokes(stroke1, stroke2)
+
+        coEvery { regionManager.visitItemsInRect(any(), any()) } answers {
+            val visitor = secondArg<(CanvasItem) -> Unit>()
+            visitor(stroke1)
+            visitor(stroke2)
+        }
+
+        model.deleteLayerWithContents(layer2.id)
+
+        // Items should have been removed
+        coVerify { regionManager.removeItems(match { items ->
+            items.size == 1 && items[0].layerId == layer2.id
+        }) }
+        // Layer should have been removed from LayerManager
+        assertThat(model.layerManager.getLayer(layer2.id)).isNull()
+    }
+
+    @Test
+    fun `undo after deleteLayerWithContents restores layer and items`() = runTest {
+        every { regionManager.getContentBounds() } returns RectF(0f, 0f, 100f, 100f)
+        model.initializeSession(regionManager)
+
+        val layer2 = model.layerManager.addLayer("Layer 2")
+        val layer2Id = layer2.id
+
+        val stroke = createTestStroke(order = 1, bounds = RectF(10f, 10f, 20f, 20f), layerId = layer2Id)
+
+        setupRegionWithStrokes(stroke)
+
+        coEvery { regionManager.visitItemsInRect(any(), any()) } answers {
+            val visitor = secondArg<(CanvasItem) -> Unit>()
+            visitor(stroke)
+        }
+
+        model.deleteLayerWithContents(layer2Id)
+
+        // Layer should be gone
+        assertThat(model.layerManager.getLayer(layer2Id)).isNull()
+
+        // Undo should restore the layer and items
+        model.undo()
+
+        assertThat(model.layerManager.getLayer(layer2Id)).isNotNull()
+        assertThat(model.layerManager.getLayer(layer2Id)!!.name).isEqualTo("Layer 2")
+        coVerify { regionManager.addItem(stroke) }
+    }
+
+    @Test
+    fun `redo after undo of deleteLayerWithContents re-deletes layer and items`() = runTest {
+        every { regionManager.getContentBounds() } returns RectF(0f, 0f, 100f, 100f)
+        model.initializeSession(regionManager)
+
+        val layer2 = model.layerManager.addLayer("Layer 2")
+        val layer2Id = layer2.id
+
+        val stroke = createTestStroke(order = 1, bounds = RectF(10f, 10f, 20f, 20f), layerId = layer2Id)
+
+        setupRegionWithStrokes(stroke)
+
+        coEvery { regionManager.visitItemsInRect(any(), any()) } answers {
+            val visitor = secondArg<(CanvasItem) -> Unit>()
+            visitor(stroke)
+        }
+
+        model.deleteLayerWithContents(layer2Id)
+        model.undo()
+
+        // Layer should be restored
+        assertThat(model.layerManager.getLayer(layer2Id)).isNotNull()
+
+        // Redo should re-delete the layer
+        model.redo()
+
+        assertThat(model.layerManager.getLayer(layer2Id)).isNull()
+    }
 }

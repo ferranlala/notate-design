@@ -319,6 +319,35 @@ class InfiniteCanvasModel {
         deleteItems(itemsToDelete)
     }
 
+    /**
+     * Deletes a layer and all its contents as a single undoable action.
+     * The layer metadata and items are captured so they can be restored on undo.
+     */
+    suspend fun deleteLayerWithContents(layerId: String) {
+        val layer = layerManager.getLayer(layerId) ?: return
+        val layerIndex = layerManager.getLayerIndex(layerId)
+        if (layerIndex == -1) return
+
+        // Collect items on this layer
+        val bounds = getContentBounds()
+        val itemsToDelete = mutableListOf<CanvasItem>()
+        if (!bounds.isEmpty) {
+            val searchBounds = RectF(bounds)
+            searchBounds.inset(-10f, -10f)
+            visitItemsInRect(searchBounds) { item ->
+                if (item.layerId == layerId) {
+                    itemsToDelete.add(item)
+                }
+            }
+        }
+
+        mutex.withLock {
+            val action = HistoryAction.DeleteLayer(layer, layerIndex, itemsToDelete)
+            executeAction(action)
+            historyManager.addToStack(action)
+        }
+    }
+
     suspend fun replaceItems(
         oldItems: List<CanvasItem>,
         newItems: List<CanvasItem>,
@@ -385,6 +414,15 @@ class InfiniteCanvasModel {
                 if (recalculateBounds) recalculateContentBounds()
                 _events.tryEmit(ModelEvent.BulkItemsAdded(action.bounds))
             }
+
+            is HistoryAction.DeleteLayer -> {
+                if (action.items.isNotEmpty()) {
+                    rm.removeItems(action.items)
+                    _events.tryEmit(ModelEvent.ItemsRemoved(action.items))
+                }
+                layerManager.removeLayer(action.layer.id)
+                if (recalculateBounds) recalculateContentBounds()
+            }
         }
     }
 
@@ -430,6 +468,17 @@ class InfiniteCanvasModel {
                 if (recalculateBounds) recalculateContentBounds()
                 _events.tryEmit(ModelEvent.BulkItemsAdded(action.bounds))
             }
+
+            is HistoryAction.DeleteLayer -> {
+                layerManager.restoreLayer(action.layer, action.layerIndex)
+                if (action.items.isNotEmpty()) {
+                    action.items.forEach { item ->
+                        rm.addItem(item)
+                        updateContentBounds(item.bounds)
+                    }
+                    _events.tryEmit(ModelEvent.ItemsAdded(action.items))
+                }
+            }
         }
     }
 
@@ -469,6 +518,10 @@ class InfiniteCanvasModel {
 
             is HistoryAction.RemoveStashed -> {
                 action.bounds
+            }
+
+            is HistoryAction.DeleteLayer -> {
+                calculateBounds(action.items)
             }
         }
 

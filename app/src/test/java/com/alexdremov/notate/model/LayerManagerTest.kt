@@ -289,4 +289,48 @@ class LayerManagerTest {
     fun `renameLayer returns null for unknown layer`() {
         assertNull(layerManager.renameLayer("unknown", "New Name"))
     }
+
+    @Test
+    fun `getLayerIndex returns correct index`() {
+        val layer2 = layerManager.addLayer("Layer 2")
+        val layer3 = layerManager.addLayer("Layer 3")
+
+        assertEquals(0, layerManager.getLayerIndex(Layer.DEFAULT_LAYER_ID))
+        assertEquals(1, layerManager.getLayerIndex(layer2.id))
+        assertEquals(2, layerManager.getLayerIndex(layer3.id))
+    }
+
+    @Test
+    fun `getLayerIndex returns -1 for unknown id`() {
+        assertEquals(-1, layerManager.getLayerIndex("unknown"))
+    }
+
+    @Test
+    fun `restoreLayer inserts layer at correct position`() {
+        val layer2 = layerManager.addLayer("Layer 2")
+        val layer3 = layerManager.addLayer("Layer 3")
+
+        // Remove layer 2
+        layerManager.removeLayer(layer2.id)
+        assertEquals(2, layerManager.getLayers().size)
+        assertNull(layerManager.getLayer(layer2.id))
+
+        // Restore layer 2 at original position (index 1)
+        layerManager.restoreLayer(layer2, 1)
+        val layers = layerManager.getLayers()
+        assertEquals(3, layers.size)
+        assertEquals(Layer.DEFAULT_LAYER_ID, layers[0].id)
+        assertEquals(layer2.id, layers[1].id)
+        assertEquals(layer3.id, layers[2].id)
+    }
+
+    @Test
+    fun `restoreLayer clamps index to valid range`() {
+        // Restore at index beyond current size
+        val layer = Layer(id = "restored", name = "Restored")
+        layerManager.restoreLayer(layer, 100)
+        val layers = layerManager.getLayers()
+        assertEquals(2, layers.size)
+        assertEquals("restored", layers.last().id)
+    }
 }

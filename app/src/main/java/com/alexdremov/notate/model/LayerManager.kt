@@ -87,6 +87,27 @@ class LayerManager {
         }
 
     /**
+     * Returns the index of a layer in the list, or -1 if not found.
+     */
+    fun getLayerIndex(layerId: String): Int =
+        synchronized(lock) {
+            _layers.value.indexOfFirst { it.id == layerId }
+        }
+
+    /**
+     * Restores a previously removed layer at a specific index.
+     * Used by undo to re-insert a deleted layer.
+     */
+    fun restoreLayer(layer: Layer, atIndex: Int) {
+        synchronized(lock) {
+            val newLayers = _layers.value.toMutableList()
+            val safeIndex = atIndex.coerceIn(0, newLayers.size)
+            newLayers.add(safeIndex, layer)
+            _layers.value = newLayers
+        }
+    }
+
+    /**
      * Toggles the visibility of a layer.
      * @return the updated layer, or null if not found.
      */

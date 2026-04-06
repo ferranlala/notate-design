@@ -62,7 +62,7 @@ import kotlinx.coroutines.launch
 fun LayersDropdownPanel(
     layerManager: LayerManager,
     onLayerChanged: () -> Unit,
-    onDeleteLayerContents: suspend (String) -> Unit,
+    onDeleteLayer: suspend (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val layers by layerManager.layers.collectAsState()
@@ -75,14 +75,13 @@ fun LayersDropdownPanel(
         AlertDialog(
             onDismissRequest = { layerPendingDelete = null },
             title = { Text("Delete Layer") },
-            text = { Text("Delete \"${layer.name}\" and all its contents? This cannot be undone.") },
+            text = { Text("Delete \"${layer.name}\" and all its contents?") },
             confirmButton = {
                 TextButton(onClick = {
                     val id = layer.id
                     layerPendingDelete = null
                     scope.launch {
-                        onDeleteLayerContents(id)
-                        layerManager.removeLayer(id)
+                        onDeleteLayer(id)
                         onLayerChanged()
                     }
                 }) {
