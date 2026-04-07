@@ -820,7 +820,7 @@ object PdfExporter {
 
             val visibleItems = model.queryItems(pageWorldRect)
                 .filter { !hiddenLayerIds.contains(it.layerId) }
-            visibleItems.sortWith(compareBy<CanvasItem> { it.zIndex }.thenBy { it.order })
+                .sortedWith(compareBy<CanvasItem> { it.zIndex }.thenBy { it.order })
 
             if (isVector) {
                 renderVectorItems(canvas, visibleItems, paint, context)
@@ -1007,7 +1007,7 @@ object PdfExporter {
 
                             val tileItems = model.queryItems(tileRect)
                                 .filter { !hiddenLayerIds.contains(it.layerId) }
-                            tileItems.sortWith(compareBy<CanvasItem> { it.zIndex }.thenBy { it.order })
+                                .sortedWith(compareBy<CanvasItem> { it.zIndex }.thenBy { it.order })
 
                             val paint =
                                 Paint().apply {

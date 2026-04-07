@@ -12,7 +12,6 @@ import com.alexdremov.notate.data.region.RegionManager
 import com.alexdremov.notate.model.BackgroundStyle
 import com.alexdremov.notate.model.CanvasItem
 import com.alexdremov.notate.model.InfiniteCanvasModel
-import com.alexdremov.notate.model.Layer
 import com.alexdremov.notate.model.LayerManager
 import com.alexdremov.notate.model.Stroke
 import com.alexdremov.notate.model.StrokeType
@@ -401,10 +400,11 @@ class PdfExporterTest {
             every { model.layerManager } returns mockLayerManager
             every { mockLayerManager.getHiddenLayerIds() } returns setOf(hiddenLayerId)
 
-            val visibleStroke = createTestStroke(100f, 100f)
-            val hiddenStroke = createTestStroke(200f, 200f).copy(layerId = hiddenLayerId)
+            // All queried items are on the hidden layer
+            val hiddenStroke1 = createTestStroke(100f, 100f).copy(layerId = hiddenLayerId)
+            val hiddenStroke2 = createTestStroke(200f, 200f).copy(layerId = hiddenLayerId)
 
-            io.mockk.coEvery { model.queryItems(any()) } returns arrayListOf(visibleStroke, hiddenStroke)
+            io.mockk.coEvery { model.queryItems(any()) } returns arrayListOf(hiddenStroke1, hiddenStroke2)
             every { model.getContentBounds() } returns RectF(100f, 100f, 300f, 300f)
             every { model.canvasType } returns CanvasType.FIXED_PAGES
             every { model.pageWidth } returns CanvasConfig.PAGE_A4_WIDTH
@@ -424,7 +424,7 @@ class PdfExporterTest {
                 includeHiddenLayers = false,
             )
 
-            // Pages are still produced (just without the hidden item)
+            // Pages are still produced even when all items are on hidden layers
             verify(atLeast = 1) { mockDoc.startPage(any()) }
             verify { mockLayerManager.getHiddenLayerIds() }
         }
