@@ -65,9 +65,11 @@
         android:id="@+id/cb_include_hidden_layers"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Include hidden layers"
+        android:text="Export hidden layers"
         android:textSize="16sp"
         android:padding="8dp"
+        android:layout_marginTop="12dp"
+        android:layout_marginBottom="12dp"
         android:checked="false" />
 
     <androidx.compose.ui.platform.ComposeView
