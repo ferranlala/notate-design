@@ -81,7 +81,7 @@ class SelectionActionPopup(
             setBackgroundResource(R.drawable.bg_popup_outlined)
         }
 
-        for (layer in layers) {
+        for (layer in layers.reversed()) {
             val itemView = inflater.inflate(R.layout.item_layer_picker, listLayout, false)
             val textView = itemView.findViewById<TextView>(R.id.layerName)
             textView.text = layer.name
