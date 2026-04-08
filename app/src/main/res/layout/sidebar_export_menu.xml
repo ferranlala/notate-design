@@ -61,16 +61,41 @@
 
     </RadioGroup>
 
-    <CheckBox
-        android:id="@+id/cb_include_hidden_layers"
+    <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Export hidden layers"
-        android:textSize="16sp"
-        android:padding="8dp"
-        android:layout_marginTop="12dp"
-        android:layout_marginBottom="12dp"
-        android:checked="false" />
+        android:text="Export Layers"
+        android:textSize="14sp"
+        android:textColor="#000000"
+        android:textAllCaps="true"
+        android:textStyle="bold"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="8dp" />
+
+    <RadioGroup
+        android:id="@+id/rg_export_layers"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <RadioButton
+            android:id="@+id/rb_export_all"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="All"
+            android:textSize="16sp"
+            android:padding="8dp" />
+
+        <RadioButton
+            android:id="@+id/rb_export_visible"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Visible"
+            android:textSize="16sp"
+            android:padding="8dp"
+            android:checked="true" />
+
+    </RadioGroup>
 
     <androidx.compose.ui.platform.ComposeView
         android:id="@+id/compose_pdf_settings"
