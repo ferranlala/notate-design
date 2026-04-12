@@ -353,12 +353,12 @@ class InfiniteCanvasModel {
      * Undo removes the layer; redo re-adds it.
      */
     suspend fun addLayerWithHistory(name: String): Layer {
-        val layer = layerManager.addLayer(name)
-        mutex.withLock {
+        return mutex.withLock {
+            val layer = layerManager.addLayer(name)
             val action = HistoryAction.AddLayer(layer)
             historyManager.addToStack(action)
+            layer
         }
-        return layer
     }
 
     /**
