@@ -15,6 +15,7 @@ data class Stroke(
     override val bounds: RectF,
     val strokeOrder: Long = 0,
     override val zIndex: Float = 0f,
+    override val layerId: String = Layer.DEFAULT_LAYER_ID,
 ) : CanvasItem {
     override val order: Long get() = strokeOrder
 

@@ -54,9 +54,11 @@ import com.alexdremov.notate.model.*
 import com.alexdremov.notate.model.InfiniteCanvasModel
 import com.alexdremov.notate.ui.controller.CanvasController
 import com.alexdremov.notate.ui.navigation.CompactPageNavigation
+import com.alexdremov.notate.ui.settings.LayersDropdownPanel
 import com.alexdremov.notate.util.Logger
 import com.alexdremov.notate.vm.DrawingViewModel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.util.Collections
 import kotlin.math.roundToInt
 
@@ -69,6 +71,10 @@ fun MainToolbar(
     onToolClick: (ToolbarItem, Rect) -> Unit,
     onActionClick: (ActionType) -> Unit,
     onOpenSidebar: () -> Unit,
+    layerManager: LayerManager? = null,
+    onLayerChanged: () -> Unit = {},
+    onDeleteLayer: suspend (String) -> Unit = {},
+    onAddLayer: suspend (String) -> Unit = {},
     onToolbarExpandStart: () -> Unit = {},
     onToolbarExpanded: () -> Unit = {},
     onToolbarCollapsed: () -> Unit = {},
@@ -226,6 +232,10 @@ fun MainToolbar(
                             canvasController = canvasController,
                             canvasModel = canvasModel,
                             isHorizontal = true,
+                            layerManager = layerManager,
+                            onLayerChanged = onLayerChanged,
+                            onDeleteLayer = onDeleteLayer,
+                            onAddLayer = onAddLayer,
                             onSlotPositioned = { index, center -> slotCenters[index] = center },
                             onDragStart = { item ->
                                 draggingItem = item
@@ -333,6 +343,10 @@ fun MainToolbar(
                             canvasController = canvasController,
                             canvasModel = canvasModel,
                             isHorizontal = false,
+                            layerManager = layerManager,
+                            onLayerChanged = onLayerChanged,
+                            onDeleteLayer = onDeleteLayer,
+                            onAddLayer = onAddLayer,
                             onSlotPositioned = { index, center -> slotCenters[index] = center },
                             onDragStart = { item ->
                                 draggingItem = item
@@ -443,6 +457,10 @@ fun DraggableItems(
     canvasController: CanvasController?,
     canvasModel: InfiniteCanvasModel?,
     isHorizontal: Boolean,
+    layerManager: LayerManager?,
+    onLayerChanged: () -> Unit,
+    onDeleteLayer: suspend (String) -> Unit,
+    onAddLayer: suspend (String) -> Unit,
     onSlotPositioned: (Int, Offset) -> Unit,
     onDragStart: (ToolbarItem) -> Unit,
     onDrag: (Offset) -> Unit,
@@ -491,6 +509,10 @@ fun DraggableItems(
                     canvasController = canvasController,
                     canvasModel = canvasModel,
                     isHorizontal = isHorizontal,
+                    layerManager = layerManager,
+                    onLayerChanged = onLayerChanged,
+                    onDeleteLayer = onDeleteLayer,
+                    onAddLayer = onAddLayer,
                     onClick = { rect ->
                         if (item is ToolbarItem.Action) {
                             onActionClick(item.actionType)
@@ -543,6 +565,10 @@ fun ToolbarItemWrapper(
     canvasController: CanvasController?,
     canvasModel: InfiniteCanvasModel?,
     isHorizontal: Boolean,
+    layerManager: LayerManager?,
+    onLayerChanged: () -> Unit,
+    onDeleteLayer: suspend (String) -> Unit,
+    onAddLayer: suspend (String) -> Unit,
     onClick: (Rect) -> Unit,
     onRemove: () -> Unit,
     modifier: Modifier = Modifier,
@@ -594,6 +620,41 @@ fun ToolbarItemWrapper(
             } else {
                 // Fallback icon
                 Icon(painter = painterResource(R.drawable.ic_chevron_right), contentDescription = "Page Nav")
+            }
+        } else if (item is ToolbarItem.Widget && item.widgetType == WidgetType.LAYERS) {
+            // Layers widget — renders as icon button with dropdown popup
+            var showDropdown by remember { mutableStateOf(false) }
+            Box {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clickable(enabled = !isEditMode) {
+                            itemBounds?.let { onClick(it) }
+                            showDropdown = !showDropdown
+                        },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_layers),
+                        contentDescription = "Layers",
+                        tint = Color.Black,
+                    )
+                }
+                if (showDropdown && layerManager != null) {
+                    Popup(
+                        alignment = Alignment.TopStart,
+                        onDismissRequest = { showDropdown = false },
+                        properties = PopupProperties(focusable = true, dismissOnBackPress = true, dismissOnClickOutside = true),
+                    ) {
+                        LayersDropdownPanel(
+                            layerManager = layerManager,
+                            onLayerChanged = onLayerChanged,
+                            onDeleteLayer = onDeleteLayer,
+                            onAddLayer = onAddLayer,
+                            onDismiss = { showDropdown = false },
+                        )
+                    }
+                }
             }
         } else {
             // Standard Icon Item
@@ -728,6 +789,9 @@ fun RenderToolbarItemIcon(item: ToolbarItem) {
                 WidgetType.PAGE_NAVIGATION -> {
                     Icon(painter = painterResource(R.drawable.ic_chevron_right), contentDescription = "Page Nav", tint = Color.Black)
                 }
+                WidgetType.LAYERS -> {
+                    Icon(painter = painterResource(R.drawable.ic_layers), contentDescription = "Layers", tint = Color.Black)
+                }
             }
         }
     }
@@ -850,6 +914,13 @@ fun ToolbarEditPanel(
                     onClick = { viewModel.addToolbarItem(ToolbarItem.Widget(WidgetType.PAGE_NAVIGATION)) },
                 )
             }
+
+            // Add Layers
+            AddItemButton(
+                item = ToolbarItem.Widget(WidgetType.LAYERS),
+                label = stringResource(R.string.layers_tool),
+                onClick = { viewModel.addToolbarItem(ToolbarItem.Widget(WidgetType.LAYERS)) },
+            )
         }
 
         Spacer(modifier = Modifier.height(8.dp))

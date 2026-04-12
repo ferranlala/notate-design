@@ -29,6 +29,7 @@ data class TextItem(
     override val order: Long = 0,
     val rotation: Float = 0f,
     val opacity: Float = 1.0f,
+    override val layerId: String = Layer.DEFAULT_LAYER_ID,
 ) : CanvasItem {
     @Transient
     var renderCache: StaticLayout? = null

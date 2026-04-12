@@ -26,4 +26,19 @@ sealed class HistoryAction {
         val bounds: RectF,
         val ids: Set<Long>,
     ) : HistoryAction()
+
+    data class DeleteLayer(
+        val layer: Layer,
+        val layerIndex: Int,
+        val items: List<CanvasItem>,
+    ) : HistoryAction()
+
+    data class AddLayer(
+        val layer: Layer,
+    ) : HistoryAction()
+
+    data class MoveToLayer(
+        val originalItems: List<CanvasItem>,
+        val movedItems: List<CanvasItem>,
+    ) : HistoryAction()
 }

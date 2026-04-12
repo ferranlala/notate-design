@@ -43,6 +43,9 @@ class InfiniteCanvasModel {
     // History Manager
     private val historyManager = HistoryManager()
 
+    // Layer Manager
+    val layerManager = LayerManager()
+
     sealed class ModelEvent {
         data class ItemsAdded(
             val items: List<CanvasItem>,
@@ -144,12 +147,13 @@ class InfiniteCanvasModel {
 
         var addedItem: CanvasItem? = null
         mutex.withLock {
+            val activeLayerId = layerManager.getActiveLayerId()
             val orderedItem =
                 when (item) {
-                    is Stroke -> item.copy(strokeOrder = nextOrder++)
-                    is CanvasImage -> item.copy(order = nextOrder++)
-                    is TextItem -> item.copy(order = nextOrder++)
-                    is LinkItem -> item.copy(order = nextOrder++)
+                    is Stroke -> item.copy(strokeOrder = nextOrder++, layerId = activeLayerId)
+                    is CanvasImage -> item.copy(order = nextOrder++, layerId = activeLayerId)
+                    is TextItem -> item.copy(order = nextOrder++, layerId = activeLayerId)
+                    is LinkItem -> item.copy(order = nextOrder++, layerId = activeLayerId)
                     else -> throw IllegalArgumentException("Unsupported CanvasItem type: ${item::class.java.name}")
                 }
 
@@ -181,6 +185,16 @@ class InfiniteCanvasModel {
             val candidates = ArrayList<CanvasItem>()
             regions.forEach { region ->
                 region.quadtree?.retrieve(candidates, searchBounds)
+            }
+
+            if (candidates.isEmpty()) return@withLock null
+
+            val lockedLayerIds = layerManager.getLockedLayerIds()
+            val hiddenLayerIds = layerManager.getHiddenLayerIds()
+
+            // Pre-filter candidates to exclude items on locked or hidden layers
+            candidates.removeAll { item ->
+                lockedLayerIds.contains(item.layerId) || hiddenLayerIds.contains(item.layerId)
             }
 
             if (candidates.isEmpty()) return@withLock null
@@ -286,6 +300,95 @@ class InfiniteCanvasModel {
         deleteItems(strokes)
     }
 
+    /**
+     * Deletes all canvas items belonging to the given layer.
+     * Searches the entire content bounds for items with the matching layerId.
+     */
+    suspend fun deleteItemsByLayerId(layerId: String) {
+        val bounds = getContentBounds()
+        if (bounds.isEmpty) return
+        // Expand slightly to ensure boundary items are included
+        val searchBounds = RectF(bounds)
+        searchBounds.inset(-10f, -10f)
+        val itemsToDelete = mutableListOf<CanvasItem>()
+        visitItemsInRect(searchBounds) { item ->
+            if (item.layerId == layerId) {
+                itemsToDelete.add(item)
+            }
+        }
+        deleteItems(itemsToDelete)
+    }
+
+    /**
+     * Deletes a layer and all its contents as a single undoable action.
+     * The layer metadata and items are captured so they can be restored on undo.
+     */
+    suspend fun deleteLayerWithContents(layerId: String) {
+        val layer = layerManager.getLayer(layerId) ?: return
+        val layerIndex = layerManager.getLayerIndex(layerId)
+        if (layerIndex == -1) return
+
+        // Collect items on this layer
+        val bounds = getContentBounds()
+        val itemsToDelete = mutableListOf<CanvasItem>()
+        if (!bounds.isEmpty) {
+            val searchBounds = RectF(bounds)
+            searchBounds.inset(-10f, -10f)
+            visitItemsInRect(searchBounds) { item ->
+                if (item.layerId == layerId) {
+                    itemsToDelete.add(item)
+                }
+            }
+        }
+
+        mutex.withLock {
+            val action = HistoryAction.DeleteLayer(layer, layerIndex, itemsToDelete)
+            executeAction(action)
+            historyManager.addToStack(action)
+        }
+    }
+
+    /**
+     * Adds a new layer as an undoable action.
+     * Undo removes the layer; redo re-adds it.
+     */
+    suspend fun addLayerWithHistory(name: String): Layer {
+        return mutex.withLock {
+            val layer = layerManager.addLayer(name)
+            val action = HistoryAction.AddLayer(layer)
+            historyManager.addToStack(action)
+            layer
+        }
+    }
+
+    /**
+     * Moves items to a different layer as an undoable action.
+     * Creates copies of the items with the target layerId and replaces the originals.
+     */
+    suspend fun moveItemsToLayer(
+        originalItems: List<CanvasItem>,
+        targetLayerId: String,
+    ): List<CanvasItem> {
+        if (originalItems.isEmpty()) return emptyList()
+        return mutex.withLock {
+            val movedItems = originalItems.map { item ->
+                when (item) {
+                    is Stroke -> item.copy(layerId = targetLayerId)
+                    is CanvasImage -> item.copy(layerId = targetLayerId)
+                    is TextItem -> item.copy(layerId = targetLayerId)
+                    is LinkItem -> item.copy(layerId = targetLayerId)
+                    else -> throw IllegalArgumentException(
+                        "Unsupported CanvasItem subtype: ${item::class.qualifiedName}"
+                    )
+                }
+            }
+            val action = HistoryAction.MoveToLayer(originalItems, movedItems)
+            executeAction(action)
+            historyManager.addToStack(action)
+            movedItems
+        }
+    }
+
     suspend fun replaceItems(
         oldItems: List<CanvasItem>,
         newItems: List<CanvasItem>,
@@ -352,6 +455,31 @@ class InfiniteCanvasModel {
                 if (recalculateBounds) recalculateContentBounds()
                 _events.tryEmit(ModelEvent.BulkItemsAdded(action.bounds))
             }
+
+            is HistoryAction.DeleteLayer -> {
+                if (action.items.isNotEmpty()) {
+                    rm.removeItems(action.items)
+                    _events.tryEmit(ModelEvent.ItemsRemoved(action.items))
+                }
+                layerManager.removeLayer(action.layer.id)
+                if (recalculateBounds) recalculateContentBounds()
+            }
+
+            is HistoryAction.AddLayer -> {
+                layerManager.restoreLayer(action.layer, layerManager.getLayers().size)
+                layerManager.setActiveLayer(action.layer.id)
+            }
+
+            is HistoryAction.MoveToLayer -> {
+                rm.removeItems(action.originalItems)
+                action.movedItems.forEach { item ->
+                    rm.addItem(item)
+                    updateContentBounds(item.bounds)
+                }
+                if (recalculateBounds) recalculateContentBounds()
+                _events.tryEmit(ModelEvent.ItemsRemoved(action.originalItems))
+                _events.tryEmit(ModelEvent.ItemsAdded(action.movedItems))
+            }
         }
     }
 
@@ -397,6 +525,32 @@ class InfiniteCanvasModel {
                 if (recalculateBounds) recalculateContentBounds()
                 _events.tryEmit(ModelEvent.BulkItemsAdded(action.bounds))
             }
+
+            is HistoryAction.DeleteLayer -> {
+                layerManager.restoreLayer(action.layer, action.layerIndex)
+                if (action.items.isNotEmpty()) {
+                    action.items.forEach { item ->
+                        rm.addItem(item)
+                        updateContentBounds(item.bounds)
+                    }
+                    _events.tryEmit(ModelEvent.ItemsAdded(action.items))
+                }
+            }
+
+            is HistoryAction.AddLayer -> {
+                layerManager.removeLayer(action.layer.id)
+            }
+
+            is HistoryAction.MoveToLayer -> {
+                rm.removeItems(action.movedItems)
+                action.originalItems.forEach { item ->
+                    rm.addItem(item)
+                    updateContentBounds(item.bounds)
+                }
+                if (recalculateBounds) recalculateContentBounds()
+                _events.tryEmit(ModelEvent.ItemsRemoved(action.movedItems))
+                _events.tryEmit(ModelEvent.ItemsAdded(action.originalItems))
+            }
         }
     }
 
@@ -436,6 +590,18 @@ class InfiniteCanvasModel {
 
             is HistoryAction.RemoveStashed -> {
                 action.bounds
+            }
+
+            is HistoryAction.DeleteLayer -> {
+                calculateBounds(action.items)
+            }
+
+            is HistoryAction.AddLayer -> {
+                RectF()
+            }
+
+            is HistoryAction.MoveToLayer -> {
+                calculateBounds(action.originalItems).apply { union(calculateBounds(action.movedItems)) }
             }
         }
 
@@ -582,6 +748,7 @@ class InfiniteCanvasModel {
                 regionSize = size,
                 nextStrokeOrder = nextOrder,
                 uuid = uuid,
+                layers = layerManager.getLayers(),
             )
         }
 
@@ -608,6 +775,7 @@ class InfiniteCanvasModel {
             tagIds = state.tagIds
             tagDefinitions = state.tagDefinitions
             uuid = state.uuid
+            layerManager.setLayers(state.layers)
         }
     }
 
@@ -625,6 +793,7 @@ class InfiniteCanvasModel {
             tagDefinitions = data.tagDefinitions
             nextOrder = data.nextStrokeOrder
             uuid = data.uuid
+            layerManager.setLayers(data.layers.map { it.toLayer() })
         }
     }
 
@@ -654,6 +823,7 @@ class InfiniteCanvasModel {
 
         var hit: CanvasItem? = null
         val candidates = ArrayList<CanvasItem>()
+        val unselectableLayerIds = layerManager.getUnselectableLayerIds()
 
         for (id in regionIds) {
             val region = rm.getRegionReadOnly(id) ?: continue
@@ -663,6 +833,7 @@ class InfiniteCanvasModel {
         candidates.sortByDescending { it.order }
 
         for (item in candidates) {
+            if (unselectableLayerIds.contains(item.layerId)) continue
             if (item.distanceToPoint(x, y) < tolerance) {
                 hit = item
                 break

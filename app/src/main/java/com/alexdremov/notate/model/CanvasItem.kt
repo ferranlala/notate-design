@@ -18,6 +18,12 @@ interface CanvasItem {
     val order: Long
 
     /**
+     * The ID of the layer this item belongs to.
+     * Defaults to [Layer.DEFAULT_LAYER_ID] for backwards compatibility.
+     */
+    val layerId: String get() = Layer.DEFAULT_LAYER_ID
+
+    /**
      * Returns the distance from the point (x, y) to the visual content of the item.
      * @return 0 if the point is inside the item. Positive value indicates distance to the nearest edge.
      * Negative values can be used to indicate depth inside (optional, treated as 0 for hit testing).

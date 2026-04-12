@@ -217,6 +217,7 @@ class SettingsSidebarController(
         val btnExport: Button = exportView.findViewById(R.id.btn_export_action)
         val btnShare: Button = exportView.findViewById(R.id.btn_share_action)
         val composeSettings: ComposeView = exportView.findViewById(R.id.compose_pdf_settings)
+        val rgExportLayers: RadioGroup = exportView.findViewById(R.id.rg_export_layers)
 
         val updateVisibility = {
             val isBitmap = rgMode.checkedRadioButtonId == R.id.rb_bitmap
@@ -251,12 +252,14 @@ class SettingsSidebarController(
 
         btnExport.setOnClickListener {
             val isVector = rgMode.checkedRadioButtonId == R.id.rb_vector
-            onExportRequest(ExportAction.Export(isVector))
+            val includeHidden = rgExportLayers.checkedRadioButtonId == R.id.rb_export_all
+            onExportRequest(ExportAction.Export(isVector, includeHidden))
         }
 
         btnShare.setOnClickListener {
             val isVector = rgMode.checkedRadioButtonId == R.id.rb_vector
-            onExportRequest(ExportAction.Share(isVector))
+            val includeHidden = rgExportLayers.checkedRadioButtonId == R.id.rb_export_all
+            onExportRequest(ExportAction.Share(isVector, includeHidden))
         }
     }
 

@@ -16,9 +16,12 @@
     <string name="undo_action">Undo</string>
     <string name="redo_action">Redo</string>
     <string name="image_action">Image</string>
+    <string name="layers_tool">Layers</string>
     <string name="select_tool_title">Select Tool</string>
     <string name="eraser_settings">Eraser Settings</string>
     <string name="pen_style">Pen Style</string>
     <string name="rectangle_selection">Rectangle</string>
     <string name="lasso_selection">Lasso</string>
+    <string name="move_selection_to_layer">Move selection to this layer</string>
+    <string name="move_to_layer_button">Move to layer</string>
 </resources>

@@ -42,26 +42,29 @@ class CanvasExportCoordinator(
 
     // State to hold pending export options while waiting for file picker result
     private var pendingExportIsVector: Boolean = true
+    private var pendingIncludeHiddenLayers: Boolean = false
 
-    fun requestExport(isVector: Boolean) {
+    fun requestExport(isVector: Boolean, includeHiddenLayers: Boolean = false) {
         pendingExportIsVector = isVector
+        pendingIncludeHiddenLayers = includeHiddenLayers
         val timestamp = SimpleDateFormat("yyyyMMdd_HHmm", Locale.US).format(Date())
         exportLauncher.launch("Note_$timestamp.pdf")
     }
 
     fun onFilePickerResult(uri: Uri?) {
         if (uri != null) {
-            performExportToUri(uri, pendingExportIsVector)
+            performExportToUri(uri, pendingExportIsVector, pendingIncludeHiddenLayers)
         }
     }
 
-    fun requestShare(isVector: Boolean) {
-        performShare(isVector)
+    fun requestShare(isVector: Boolean, includeHiddenLayers: Boolean = false) {
+        performShare(isVector, includeHiddenLayers)
     }
 
     private fun performExportToUri(
         uri: Uri,
         isVector: Boolean,
+        includeHiddenLayers: Boolean,
     ) {
         showProgress()
 
@@ -88,6 +91,7 @@ class CanvasExportCoordinator(
                             }
                         },
                         bitmapScale = scale,
+                        includeHiddenLayers = includeHiddenLayers,
                     )
                 } ?: throw Exception("Could not open output stream for $uri")
 
@@ -104,7 +108,7 @@ class CanvasExportCoordinator(
         }
     }
 
-    private fun performShare(isVector: Boolean) {
+    private fun performShare(isVector: Boolean, includeHiddenLayers: Boolean) {
         showProgress()
 
         scope.launch {
@@ -134,6 +138,7 @@ class CanvasExportCoordinator(
                             }
                         },
                         bitmapScale = scale,
+                        includeHiddenLayers = includeHiddenLayers,
                     )
                 }
 

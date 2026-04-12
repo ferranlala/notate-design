@@ -389,6 +389,16 @@ class CanvasActivity : AppCompatActivity() {
                             sidebarCoordinator.open()
                             sidebarController.showMainMenu()
                         },
+                        layerManager = binding.canvasView.getModel().layerManager,
+                        onLayerChanged = {
+                            binding.canvasView.getRenderer().clearAndRefresh()
+                        },
+                        onDeleteLayer = { layerId ->
+                            binding.canvasView.getModel().deleteLayerWithContents(layerId)
+                        },
+                        onAddLayer = { name ->
+                            binding.canvasView.getModel().addLayerWithHistory(name)
+                        },
                         onToolbarExpandStart = { toolbarCoordinator.savePosition() },
                         onToolbarExpanded = {
                             toolbarCoordinator.ensureOnScreen()
@@ -415,11 +425,11 @@ class CanvasActivity : AppCompatActivity() {
                 onExportRequest = { action ->
                     when (action) {
                         is ExportAction.Export -> {
-                            exportCoordinator.requestExport(action.isVector)
+                            exportCoordinator.requestExport(action.isVector, action.includeHiddenLayers)
                         }
 
                         is ExportAction.Share -> {
-                            exportCoordinator.requestShare(action.isVector)
+                            exportCoordinator.requestShare(action.isVector, action.includeHiddenLayers)
                             sidebarCoordinator.close()
                         }
                     }

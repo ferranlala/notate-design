@@ -801,6 +801,10 @@ class OnyxCanvasView
                             onCopy = { viewScope.launch { canvasController.copySelection() } },
                             onDelete = { viewScope.launch { canvasController.deleteSelection() } },
                             onDismiss = { },
+                            onMoveToLayer = { layerId ->
+                                viewScope.launch { canvasController.moveSelectionToLayer(layerId) }
+                            },
+                            layerProvider = { canvasModel.layerManager.getLayers() },
                         )
                 }
                 if (!selectionInteractor.isInteracting()) {

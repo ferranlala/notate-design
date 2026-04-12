@@ -111,21 +111,23 @@ object PdfExporter {
         callback: ProgressCallback?,
         bitmapScale: Float = 1.0f,
         pdfDocumentFactory: () -> PdfDocumentWrapper = { AndroidPdfDocumentWrapper() },
+        includeHiddenLayers: Boolean = false,
     ) = withContext(Dispatchers.IO) {
         val isFixedPages = model.canvasType == CanvasType.FIXED_PAGES
+        val hiddenLayerIds = if (includeHiddenLayers) emptySet() else model.layerManager.getHiddenLayerIds()
 
         // Use PDFBox for Infinite Canvas (both Bitmap and Vector) to support streaming.
         // Use PdfDocument (Android) for Fixed Pages as they are naturally paginated and smaller.
         if (!isFixedPages) {
             PDFBoxResourceLoader.init(context)
             if (isVector) {
-                exportInfiniteCanvasVectorStreaming(context, model, outputStream, callback)
+                exportInfiniteCanvasVectorStreaming(context, model, outputStream, callback, hiddenLayerIds)
             } else {
-                exportBitmapStreaming(context, model, outputStream, callback, bitmapScale)
+                exportBitmapStreaming(context, model, outputStream, callback, bitmapScale, hiddenLayerIds)
             }
         } else {
             // Use standard PdfDocument for Fixed Pages
-            exportWithPdfDocument(context, model, outputStream, isVector, callback, pdfDocumentFactory)
+            exportWithPdfDocument(context, model, outputStream, isVector, callback, pdfDocumentFactory, hiddenLayerIds)
         }
     }
 
@@ -136,6 +138,7 @@ object PdfExporter {
         isVector: Boolean,
         callback: ProgressCallback?,
         pdfDocumentFactory: () -> PdfDocumentWrapper,
+        hiddenLayerIds: Set<String>,
     ) {
         val pdfDocument = pdfDocumentFactory()
 
@@ -149,10 +152,10 @@ object PdfExporter {
             currentCoroutineContext().ensureActive()
 
             if (type == CanvasType.FIXED_PAGES) {
-                exportFixedPages(pdfDocument, model, bounds, pWidth, pHeight, bgStyle, isVector, callback, context)
+                exportFixedPages(pdfDocument, model, bounds, pWidth, pHeight, bgStyle, isVector, callback, context, hiddenLayerIds)
             } else {
                 // Fallback for infinite canvas if PDFBox fails (should not happen with new logic)
-                exportInfiniteCanvasVector(pdfDocument, model, bounds, bgStyle, callback, context)
+                exportInfiniteCanvasVector(pdfDocument, model, bounds, bgStyle, callback, context, hiddenLayerIds)
             }
 
             currentCoroutineContext().ensureActive()
@@ -173,6 +176,7 @@ object PdfExporter {
         model: InfiniteCanvasModel,
         outputStream: OutputStream,
         callback: ProgressCallback?,
+        hiddenLayerIds: Set<String>,
     ) = withContext(Dispatchers.Default) {
         val document = PDDocument(MemoryUsageSetting.setupTempFileOnly())
 
@@ -225,6 +229,7 @@ object PdfExporter {
 
                     for (item in items) {
                         if (!processedItems.add(item.order)) continue
+                        if (hiddenLayerIds.contains(item.layerId)) continue
 
                         when (item) {
                             is Stroke -> renderStrokeToPdf(contentStream, item, alphaCache, bounds, height)
@@ -729,6 +734,7 @@ object PdfExporter {
         outputStream: OutputStream,
         callback: ProgressCallback?,
         bitmapScale: Float,
+        hiddenLayerIds: Set<String>,
     ) = withContext(Dispatchers.IO) {
         val document = PDDocument(MemoryUsageSetting.setupTempFileOnly())
 
@@ -752,7 +758,7 @@ object PdfExporter {
             val contentStream = PDPageContentStream(document, page, PDPageContentStream.AppendMode.OVERWRITE, false, false)
 
             callback?.onProgress(10, "Rendering Canvas...")
-            renderTilesToPdfBox(document, contentStream, model, bounds, context, callback, bitmapScale)
+            renderTilesToPdfBox(document, contentStream, model, bounds, context, callback, bitmapScale, hiddenLayerIds)
 
             contentStream.close()
 
@@ -777,6 +783,7 @@ object PdfExporter {
         isVector: Boolean,
         callback: ProgressCallback?,
         context: android.content.Context,
+        hiddenLayerIds: Set<String>,
     ) {
         val pageFullHeight = pageHeight + CanvasConfig.PAGE_SPACING
         val lastPageIdx = if (contentBounds.isEmpty) 0 else floor(contentBounds.bottom / pageFullHeight).toInt().coerceAtLeast(0)
@@ -812,7 +819,8 @@ object PdfExporter {
             BackgroundDrawer.draw(canvas, bgStyle, patternArea, 0f, offsetX, offsetY, forceVector = isVector)
 
             val visibleItems = model.queryItems(pageWorldRect)
-            visibleItems.sortWith(compareBy<CanvasItem> { it.zIndex }.thenBy { it.order })
+                .filter { !hiddenLayerIds.contains(it.layerId) }
+                .sortedWith(compareBy<CanvasItem> { it.zIndex }.thenBy { it.order })
 
             if (isVector) {
                 renderVectorItems(canvas, visibleItems, paint, context)
@@ -832,6 +840,7 @@ object PdfExporter {
         bgStyle: BackgroundStyle,
         callback: ProgressCallback?,
         context: android.content.Context,
+        hiddenLayerIds: Set<String>,
     ) {
         val padding = 50f
         val bounds = RectF()
@@ -864,7 +873,7 @@ object PdfExporter {
                 strokeCap = Paint.Cap.ROUND
             }
 
-        renderVectorItemsFromRegions(canvas, model, bounds, paint, context)
+        renderVectorItemsFromRegions(canvas, model, bounds, paint, context, hiddenLayerIds)
 
         doc.finishPage(page)
     }
@@ -892,6 +901,7 @@ object PdfExporter {
         bounds: RectF,
         paint: Paint,
         context: android.content.Context,
+        hiddenLayerIds: Set<String>,
     ) {
         val regionManager = model.getRegionManager() ?: return
         val regions = regionManager.getRegionsInRect(bounds)
@@ -902,6 +912,7 @@ object PdfExporter {
             regionItems.sortWith(compareBy<CanvasItem> { it.zIndex }.thenBy { it.order })
 
             for (item in regionItems) {
+                if (hiddenLayerIds.contains(item.layerId)) continue
                 if (item is Stroke) {
                     paint.color = item.color
                     paint.strokeWidth = item.width
@@ -952,6 +963,7 @@ object PdfExporter {
         context: android.content.Context,
         callback: ProgressCallback?,
         bitmapScale: Float,
+        hiddenLayerIds: Set<String>,
     ) = withContext(Dispatchers.Default) {
         val tileSize = 2048
         val cols = ceil(bounds.width() / tileSize).toInt()
@@ -994,7 +1006,8 @@ object PdfExporter {
                             BackgroundDrawer.draw(canvas, bgStyle, tileRect, 1.0f, 0f, 0f, forceVector = false)
 
                             val tileItems = model.queryItems(tileRect)
-                            tileItems.sortWith(compareBy<CanvasItem> { it.zIndex }.thenBy { it.order })
+                                .filter { !hiddenLayerIds.contains(it.layerId) }
+                                .sortedWith(compareBy<CanvasItem> { it.zIndex }.thenBy { it.order })
 
                             val paint =
                                 Paint().apply {

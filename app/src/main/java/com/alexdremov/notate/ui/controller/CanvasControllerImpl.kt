@@ -12,7 +12,9 @@ import com.alexdremov.notate.model.CanvasImage
 import com.alexdremov.notate.model.CanvasItem
 import com.alexdremov.notate.model.EraserType
 import com.alexdremov.notate.model.InfiniteCanvasModel
+import com.alexdremov.notate.model.LinkItem
 import com.alexdremov.notate.model.Stroke
+import com.alexdremov.notate.model.TextItem
 import com.alexdremov.notate.ui.render.CanvasRenderer
 import com.alexdremov.notate.util.ClipboardManager
 import com.alexdremov.notate.util.StrokeGeometry
@@ -176,8 +178,11 @@ class CanvasControllerImpl(
     override suspend fun getItemsInRect(rect: RectF): List<CanvasItem> =
         withContext(Dispatchers.Default) {
             val result = ArrayList<CanvasItem>()
+            val unselectableLayerIds = model.layerManager.getUnselectableLayerIds()
 
             model.visitItemsInRect(rect) { item ->
+                if (unselectableLayerIds.contains(item.layerId)) return@visitItemsInRect
+
                 val matches =
                     if (rect.contains(item.bounds)) {
                         true
@@ -203,9 +208,11 @@ class CanvasControllerImpl(
             pathPoints = StrokeGeometry.simplifyPoints(pathPoints, 5.0f)
 
             val result = ArrayList<CanvasItem>()
+            val unselectableLayerIds = model.layerManager.getUnselectableLayerIds()
 
             model.visitItemsInRect(bounds) { item ->
                 if (!bounds.contains(item.bounds)) return@visitItemsInRect
+                if (unselectableLayerIds.contains(item.layerId)) return@visitItemsInRect
 
                 val matches =
                     if (StrokeGeometry.isRectFullyInPolygon(item.bounds, pathPoints)) {
@@ -1223,6 +1230,37 @@ class CanvasControllerImpl(
         } finally {
             withContext(Dispatchers.Main) {
                 progressCallback?.invoke(false, null, 0)
+            }
+        }
+    }
+
+    override suspend fun moveSelectionToLayer(targetLayerId: String) {
+        operationMutex.withLock {
+            if (!selectionManager.hasSelection()) return@withLock
+
+            val originalItems = fetchSelectedItems()
+            if (originalItems.isEmpty()) return@withLock
+
+            val bounds = RectF()
+            bounds.set(originalItems[0].bounds)
+            for (i in 1 until originalItems.size) bounds.union(originalItems[i].bounds)
+            bounds.inset(-5f, -5f)
+
+            val committedItems = withContext(Dispatchers.IO) {
+                model.moveItemsToLayer(originalItems, targetLayerId)
+            }
+
+            selectionManager.clearSelection()
+            selectionManager.selectAll(committedItems)
+            updatePinnedRegions()
+
+            withContext(Dispatchers.Main) {
+                renderer.setHiddenItems(selectionManager.getSelectedIds())
+                renderer.hideItemsInCache(committedItems)
+                generateSelectionImposter()
+                renderer.invalidateTiles(bounds)
+                renderer.invalidate()
+                onContentChangedListener?.invoke()
             }
         }
     }
