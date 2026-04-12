@@ -393,11 +393,14 @@ class LayerAwareSelectionTest {
         model.initializeSession(regionManager)
 
         val layer2 = model.layerManager.addLayer("Layer 2")
+        // Set active layer back to default so the stroke is added there
+        model.layerManager.setActiveLayer(Layer.DEFAULT_LAYER_ID)
 
         val stroke = createTestStroke(order = 1, bounds = RectF(10f, 10f, 20f, 20f))
         setupRegionWithStrokes(stroke)
 
         val addedStroke = model.addItem(stroke)!!
+        assertThat(addedStroke.layerId).isEqualTo(Layer.DEFAULT_LAYER_ID)
 
         val movedItems = model.moveItemsToLayer(listOf(addedStroke), layer2.id)
 
@@ -415,6 +418,8 @@ class LayerAwareSelectionTest {
         model.initializeSession(regionManager)
 
         val layer2 = model.layerManager.addLayer("Layer 2")
+        // Set active layer back to default so the stroke is added there
+        model.layerManager.setActiveLayer(Layer.DEFAULT_LAYER_ID)
 
         val stroke = createTestStroke(order = 1, bounds = RectF(10f, 10f, 20f, 20f))
         setupRegionWithStrokes(stroke)
