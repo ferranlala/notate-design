@@ -353,4 +353,78 @@ class LayerAwareSelectionTest {
 
         assertThat(model.layerManager.getLayer(layer2Id)).isNull()
     }
+
+    @Test
+    fun `addLayerWithHistory adds layer and is undoable`() = runTest {
+        model.initializeSession(regionManager)
+
+        val initialLayerCount = model.layerManager.getLayers().size
+
+        val newLayer = model.addLayerWithHistory("Test Layer")
+
+        assertThat(model.layerManager.getLayers().size).isEqualTo(initialLayerCount + 1)
+        assertThat(model.layerManager.getLayer(newLayer.id)).isNotNull()
+        assertThat(model.layerManager.getActiveLayerId()).isEqualTo(newLayer.id)
+
+        // Undo should remove the layer
+        model.undo()
+
+        assertThat(model.layerManager.getLayers().size).isEqualTo(initialLayerCount)
+        assertThat(model.layerManager.getLayer(newLayer.id)).isNull()
+    }
+
+    @Test
+    fun `redo after undo of addLayerWithHistory re-adds layer`() = runTest {
+        model.initializeSession(regionManager)
+
+        val newLayer = model.addLayerWithHistory("Test Layer")
+        val layerId = newLayer.id
+
+        model.undo()
+        assertThat(model.layerManager.getLayer(layerId)).isNull()
+
+        model.redo()
+        assertThat(model.layerManager.getLayer(layerId)).isNotNull()
+        assertThat(model.layerManager.getLayer(layerId)!!.name).isEqualTo("Test Layer")
+    }
+
+    @Test
+    fun `moveItemsToLayer changes item layerId and is undoable`() = runTest {
+        model.initializeSession(regionManager)
+
+        val layer2 = model.layerManager.addLayer("Layer 2")
+
+        val stroke = createTestStroke(order = 1, bounds = RectF(10f, 10f, 20f, 20f))
+        setupRegionWithStrokes(stroke)
+
+        val addedStroke = model.addItem(stroke)!!
+
+        val movedItems = model.moveItemsToLayer(listOf(addedStroke), layer2.id)
+
+        assertThat(movedItems).hasSize(1)
+        assertThat(movedItems[0].layerId).isEqualTo(layer2.id)
+
+        // Undo should restore original layerId
+        model.undo()
+
+        coVerify { regionManager.addItem(match { it.layerId == Layer.DEFAULT_LAYER_ID }) }
+    }
+
+    @Test
+    fun `redo after undo of moveItemsToLayer re-moves items`() = runTest {
+        model.initializeSession(regionManager)
+
+        val layer2 = model.layerManager.addLayer("Layer 2")
+
+        val stroke = createTestStroke(order = 1, bounds = RectF(10f, 10f, 20f, 20f))
+        setupRegionWithStrokes(stroke)
+
+        val addedStroke = model.addItem(stroke)!!
+
+        model.moveItemsToLayer(listOf(addedStroke), layer2.id)
+        model.undo()
+        model.redo()
+
+        coVerify { regionManager.addItem(match { it.layerId == layer2.id }) }
+    }
 }

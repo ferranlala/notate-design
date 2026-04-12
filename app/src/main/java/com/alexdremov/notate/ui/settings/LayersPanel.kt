@@ -63,6 +63,7 @@ fun LayersDropdownPanel(
     layerManager: LayerManager,
     onLayerChanged: () -> Unit,
     onDeleteLayer: suspend (String) -> Unit,
+    onAddLayer: suspend (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val layers by layerManager.layers.collectAsState()
@@ -145,7 +146,9 @@ fun LayersDropdownPanel(
             TextButton(
                 onClick = {
                     val count = layers.size + 1
-                    layerManager.addLayer("Layer $count")
+                    scope.launch {
+                        onAddLayer("Layer $count")
+                    }
                 },
                 modifier = Modifier
                     .fillMaxWidth()

@@ -396,6 +396,9 @@ class CanvasActivity : AppCompatActivity() {
                         onDeleteLayer = { layerId ->
                             binding.canvasView.getModel().deleteLayerWithContents(layerId)
                         },
+                        onAddLayer = { name ->
+                            binding.canvasView.getModel().addLayerWithHistory(name)
+                        },
                         onToolbarExpandStart = { toolbarCoordinator.savePosition() },
                         onToolbarExpanded = {
                             toolbarCoordinator.ensureOnScreen()

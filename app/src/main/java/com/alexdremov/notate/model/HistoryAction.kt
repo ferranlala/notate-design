@@ -32,4 +32,13 @@ sealed class HistoryAction {
         val layerIndex: Int,
         val items: List<CanvasItem>,
     ) : HistoryAction()
+
+    data class AddLayer(
+        val layer: Layer,
+    ) : HistoryAction()
+
+    data class MoveToLayer(
+        val originalItems: List<CanvasItem>,
+        val movedItems: List<CanvasItem>,
+    ) : HistoryAction()
 }

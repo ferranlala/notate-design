@@ -1241,25 +1241,13 @@ class CanvasControllerImpl(
             val originalItems = fetchSelectedItems()
             if (originalItems.isEmpty()) return@withLock
 
-            val newItems = originalItems.map { item ->
-                when (item) {
-                    is Stroke -> item.copy(layerId = targetLayerId)
-                    is CanvasImage -> item.copy(layerId = targetLayerId)
-                    is TextItem -> item.copy(layerId = targetLayerId)
-                    is LinkItem -> item.copy(layerId = targetLayerId)
-                    else -> throw IllegalArgumentException(
-                        "Unsupported CanvasItem subtype in moveSelectionToLayer: ${item::class.qualifiedName}"
-                    )
-                }
-            }
-
             val bounds = RectF()
             bounds.set(originalItems[0].bounds)
             for (i in 1 until originalItems.size) bounds.union(originalItems[i].bounds)
             bounds.inset(-5f, -5f)
 
             val committedItems = withContext(Dispatchers.IO) {
-                model.replaceItems(originalItems, newItems)
+                model.moveItemsToLayer(originalItems, targetLayerId)
             }
 
             selectionManager.clearSelection()
